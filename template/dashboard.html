@@ -1,157 +1,145 @@
 <!DOCTYPE html>
-<html lang="en" style="width:100%; height:100%; margin:0; padding:0;">
+<html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Secret PS Login Page</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Secret PS Login Page</title>
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<style>
+    * {
+        box-sizing: border-box;
+    }
 
-    <style>
-        body, html {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            font-family: 'Roboto', sans-serif;
-            background-image: url("https://4kwallpapers.com/images/walls/thumbs/25920.jpg");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+    body {
+        margin: 0;
+        height: 100vh;
 
-        .overlay {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.55); /* sedikit lebih terang biar elegan */
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
+        /* ✅ GANTI LINK DI SINI */
+        background: url("/backgroundbackendlogin.jpg") no-repeat center center;
+        background-size: cover;
 
-        .login-container {
-            position: relative;
-            z-index: 2;
-            background: rgba(255,255,255,0.05); /* semi-transparent glass effect */
-            backdrop-filter: blur(10px);
-            padding: 50px 35px;
-            border-radius: 20px;
-            box-shadow: 0px 0px 25px rgba(0,0,0,0.6);
-            width: 90%;
-            max-width: 450px;
-            text-align: center;
-            animation: fadeIn 0.6s ease-in-out;
-        }
+        display: flex;
+        justify-content: center;
+        align-items: center;
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        /* ✅ system font (AMAN SEMUA DEVICE) */
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
 
-        .login-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 34px;
-            color: #f1c40f; /* elegan gold */
-            margin-bottom: 30px;
-            letter-spacing: 1px;
-        }
+    .overlay {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.6);
+        top: 0;
+        left: 0;
+    }
 
-        .form-control {
-            width: 100%;
-            padding: 14px 20px;
-            margin-bottom: 18px;
-            border-radius: 14px;
-            border: none;
-            font-size: 16px;
-            background: rgba(255,255,255,0.15);
-            color: #fff;
-            transition: 0.2s;
-            outline: none;
-            box-sizing: border-box;
-        }
+    .login-container {
+        position: relative;
+        background: rgba(20,20,20,0.9);
+        padding: 40px 30px;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 420px;
+        text-align: center;
+        box-shadow: 0 0 20px rgba(0,0,0,0.7);
+        z-index: 2;
+    }
 
-        .form-control::placeholder {
-            color: #ddd;
-        }
+    .login-title {
+        font-size: 28px;
+        color: #f1c40f;
+        margin-bottom: 25px;
+        font-weight: 600;
+    }
 
-        .form-control:focus {
-            background: rgba(255,255,255,0.25);
-            box-shadow: 0 0 10px rgba(241,196,15,0.5);
-        }
+    .form-control {
+        width: 100%;
+        padding: 13px;
+        margin-bottom: 15px;
+        border-radius: 10px;
+        border: none;
+        font-size: 15px;
+        background: #2c2c2c;
+        color: #fff;
+        outline: none;
+    }
 
-        .btn-login {
-            width: 100%;
-            padding: 14px;
-            background: #f1c40f;
-            border: none;
-            border-radius: 14px;
-            font-size: 17px;
-            font-weight: 600;
-            color: #121212;
-            cursor: pointer;
-            transition: 0.3s;
-        }
+    .form-control::placeholder {
+        color: #bbb;
+    }
 
-        .btn-login:hover {
-            background: #ffd966;
-        }
+    .form-control:focus {
+        border: 1px solid #f1c40f;
+    }
 
-        .btn-register {
-            width: 100%;
-            padding: 12px;
-            background: transparent;
-            border: 2px solid #f1c40f;
-            border-radius: 14px;
-            font-size: 15px;
-            font-weight: 500;
-            color: #f1c40f;
-            cursor: pointer;
-            margin-top: 12px;
-            transition: 0.3s;
-        }
+    .btn-login {
+        width: 100%;
+        padding: 13px;
+        background: #f1c40f;
+        border: none;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #121212;
+        cursor: pointer;
+    }
 
-        .btn-register:hover {
-            background: #f1c40f;
-            color: #121212;
-        }
+    .btn-login:active {
+        transform: scale(0.97);
+    }
 
-        .footer-text {
-            margin-top: 18px;
-            font-size: 13px;
-            color: #ccc;
-        }
-    </style>
+    .btn-register {
+        width: 100%;
+        padding: 11px;
+        margin-top: 10px;
+        background: transparent;
+        border: 1px solid #f1c40f;
+        border-radius: 10px;
+        font-size: 14px;
+        color: #f1c40f;
+        cursor: pointer;
+    }
+
+    .btn-register:active {
+        transform: scale(0.97);
+    }
+
+    .footer-text {
+        margin-top: 15px;
+        font-size: 12px;
+        color: #aaa;
+    }
+</style>
 </head>
+
 <body>
-    <div class="overlay"></div>
 
-    <div class="login-container">
-        <div class="login-title">Secret PS Login Page</div>
+<div class="overlay"></div>
 
-        <form method="POST" action="/player/growid/login/validate" autocomplete="off">
-            <input type="text" name="growId" class="form-control"
-                placeholder="Your Growtopia Name *" required />
-            <input type="password" name="password" class="form-control"
-                placeholder="Your Password *" required />
-            <input type="submit" class="btn-login" value="LOGIN" />
-        </form>
+<div class="login-container">
+    <div class="login-title">Secret PS</div>
 
-        <form method="POST" action="/player/growid/login/validate">
-            <input type="hidden" name="growId" value="" />
-            <input type="hidden" name="password" value="" />
-            <input type="submit" class="btn-register"
-                value="Don’t have a Growtopia ID? Register here!" />
-        </form>
+    <form method="POST" action="/player/growid/login/validate">
+        <input type="text" name="growId" class="form-control"
+            placeholder="Your GrowID" required />
+        <input type="password" name="password" class="form-control"
+            placeholder="Password" required />
+        <input type="submit" class="btn-login" value="LOGIN" />
+    </form>
 
-        <div class="footer-text">
-            &copy; 2026 Secret PS — Private Server - Bexxper & Ninepiaths
-        </div>
+    <form method="POST" action="/player/growid/login/validate">
+        <input type="hidden" name="growId" value="" />
+        <input type="hidden" name="password" value="" />
+        <input type="submit" class="btn-register"
+            value="Register New Account" />
+    </form>
+
+    <div class="footer-text">
+        © 2026 Secret PS — Private Server - Bexxper & Ninepiaths
     </div>
+</div>
+
 </body>
 </html>
