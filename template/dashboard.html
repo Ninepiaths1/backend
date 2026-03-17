@@ -6,194 +6,165 @@
 <title>Secret PS Login Page</title>
 
 <style>
-    * {
-        box-sizing: border-box;
-        -webkit-tap-highlight-color: transparent;
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+
+    /* 🔥 SUPPORT JPG / GIF */
+    background: url("https://raw.githubusercontent.com/Bexxper/backend/main/backgroundbackendlogin.jpg") no-repeat center center;
+    background-size: cover;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* 🔥 VIGNETTE HALUS */
+.overlay {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+
+    background: radial-gradient(
+        circle at center,
+        rgba(0,0,0,0.2) 0%,
+        rgba(0,0,0,0.55) 60%,
+        rgba(0,0,0,0.85) 100%
+    );
+}
+
+/* 🔥 ANIMASI */
+@keyframes fadeInSmooth {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
     }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 🔥 LOGIN BOX */
+.login-container {
+    position: relative;
+    z-index: 2;
+
+    background: rgba(20,20,20,0.92);
+    padding: 28px 20px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 360px;
+
+    text-align: center;
+
+    box-shadow: 
+        0 0 15px rgba(0,0,0,0.7),
+        0 0 10px rgba(241,196,15,0.25);
+
+    animation: fadeInSmooth 0.5s ease;
+
+    max-height: 90vh;
+    overflow: hidden;
+}
+
+/* 🔥 TITLE */
+.login-title {
+    font-size: 22px;
+    color: #f1c40f;
+    margin-bottom: 18px;
+    font-weight: 600;
+}
+
+/* 🔥 INPUT */
+.form-control {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    background: #2c2c2c;
+    color: #fff;
+    outline: none;
+    transition: 0.2s;
+}
+
+.form-control::placeholder {
+    color: #bbb;
+}
+
+.form-control:focus {
+    border: 1px solid #f1c40f;
+    box-shadow: 0 0 6px rgba(241,196,15,0.4);
+}
+
+/* 🔥 LOGIN BUTTON */
+.btn-login {
+    width: 100%;
+    padding: 10px;
+    background: #f1c40f;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #121212;
+    cursor: pointer;
+
+    transition: all 0.2s ease;
+}
+
+.btn-login:active {
+    transform: scale(0.95);
+}
+
+/* 🔥 REGISTER BUTTON */
+.btn-register {
+    width: 100%;
+    padding: 9px;
+    margin-top: 8px;
+    background: transparent;
+    border: 1px solid #f1c40f;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #f1c40f;
+    cursor: pointer;
+
+    transition: all 0.2s ease;
+}
+
+.btn-register:active {
+    transform: scale(0.95);
+}
+
+/* 🔥 FOOTER */
+.footer-text {
+    margin-top: 12px;
+    font-size: 10px;
+    color: #aaa;
+}
+
+/* 📱 ANDROID FIX (SUPER KECIL & PAS) */
+@media (max-width: 480px) {
 
     body {
-        margin: 0;
-        height: 100vh;
-
-        background: url("https://raw.githubusercontent.com/Bexxper/backend/main/backgroundbackendlogin.jpg") no-repeat center center;
-        background-size: cover;
-        background-position: center;
-
-        display: flex;
-        justify-content: center;
-        align-items: center;
-
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        align-items: flex-start;
+        padding-top: 40px;
     }
 
-    /* 🔥 Overlay + Vignette */
-    .overlay {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        top: 0;
-        left: 0;
-
-        background: radial-gradient(
-            circle at center,
-            rgba(0,0,0,0.2) 0%,
-            rgba(0,0,0,0.5) 60%,
-            rgba(0,0,0,0.85) 100%
-        );
-    }
-
-    /* 🔥 Fade-in animation */
-    @keyframes fadeInSmooth {
-        from {
-            opacity: 0;
-            transform: translateY(15px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* 🔥 Login Box */
     .login-container {
-        position: relative;
-        z-index: 2;
-
-        background: rgba(20,20,20,0.92);
-        padding: 40px 30px;
-        border-radius: 16px;
-        width: 90%;
-        max-width: 420px;
-        text-align: center;
-
-        box-shadow: 
-            0 0 20px rgba(0,0,0,0.7),
-            0 0 15px rgba(241,196,15,0.25);
-
-        animation: fadeInSmooth 0.6s ease;
+        transform: scale(0.9);
     }
-
-    /* 🔥 Title */
-    .login-title {
-        font-size: 28px;
-        color: #f1c40f;
-        margin-bottom: 25px;
-        font-weight: 600;
-    }
-
-    /* 🔥 Input */
-    .form-control {
-        width: 100%;
-        padding: 13px;
-        margin-bottom: 15px;
-        border-radius: 10px;
-        border: none;
-        font-size: 15px;
-        background: #2c2c2c;
-        color: #fff;
-        outline: none;
-        transition: 0.2s;
-    }
-
-    .form-control::placeholder {
-        color: #bbb;
-    }
-
-    .form-control:focus {
-        border: 1px solid #f1c40f;
-        box-shadow: 0 0 8px rgba(241,196,15,0.4);
-    }
-
-    /* 🔥 Login Button */
-    .btn-login {
-        width: 100%;
-        padding: 13px;
-        background: #f1c40f;
-        border: none;
-        border-radius: 10px;
-        font-size: 16px;
-        font-weight: bold;
-        color: #121212;
-        cursor: pointer;
-
-        transition: all 0.2s ease;
-    }
-
-    .btn-login:hover {
-        background: #ffd966;
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(241,196,15,0.4);
-    }
-
-    .btn-login:active {
-        transform: scale(0.96);
-    }
-
-    /* 🔥 Register Button */
-    .btn-register {
-        width: 100%;
-        padding: 11px;
-        margin-top: 10px;
-        background: transparent;
-        border: 1px solid #f1c40f;
-        border-radius: 10px;
-        font-size: 14px;
-        color: #f1c40f;
-        cursor: pointer;
-
-        transition: all 0.2s ease;
-    }
-
-    .btn-register:hover {
-        background: #f1c40f;
-        color: #121212;
-        transform: translateY(-2px);
-    }
-
-    .btn-register:active {
-        transform: scale(0.96);
-    }
-
-    /* 🔥 Footer */
-    .footer-text {
-        margin-top: 15px;
-        font-size: 12px;
-        color: #aaa;
-    }
-
-    /* 📱 MOBILE FIX */
-    @media (max-width: 480px) {
-
-        .login-container {
-            padding: 25px 18px;
-            border-radius: 12px;
-            max-width: 90%;
-        }
-
-        .login-title {
-            font-size: 22px;
-            margin-bottom: 18px;
-        }
-
-        .form-control {
-            padding: 11px;
-            font-size: 14px;
-        }
-
-        .btn-login {
-            padding: 11px;
-            font-size: 14px;
-        }
-
-        .btn-register {
-            padding: 10px;
-            font-size: 13px;
-        }
-
-        .footer-text {
-            font-size: 11px;
-        }
-    }
+}
 </style>
 </head>
 
