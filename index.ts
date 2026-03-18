@@ -73,17 +73,20 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
     // =============================
     // 🆕 REGISTER BUTTON (PERTAMA KALI)
     // =============================
-    if (!growId && !password && !_token) {
-      console.log('[MODE] REGISTER CLICK');
+if (!growId && !password && !_token) {
+  console.log('[MODE] REGISTER CLICK');
 
-      return res.json({
-        status: 'success',
-        message: 'Register OK',
-        token: Buffer.from('_token=guest&growId=guest&password=guest').toString('base64'),
-        url: '',
-        accountType: 'growtopia',
-      });
-    }
+  const raw = `growId=guest&password=guest`; // 🔥 TANPA _token
+  const token = Buffer.from(raw).toString('base64');
+
+  return res.json({
+    status: 'success',
+    message: 'Account Validated.',
+    token,
+    url: '',
+    accountType: 'growtopia',
+  });
+}
 
     // =============================
     // 🔁 RECONNECT (SETELAH CREATE GROWID)
