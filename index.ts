@@ -135,36 +135,26 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     // ✅ decode tanpa ubah isi
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
 if (decoded.includes('guest=1')) {
-  const ua = (req.headers['user-agent'] || '').toString();
+  const ua = (req.headers['user-agent'] || '').toString().toLowerCase();
 
   console.log('[GUEST DETECTED]', ua);
 
-  // ✅ ANDROID
-  if (ua.toLowerCase().includes('android')) {
-    console.log('[ANDROID → FORCE RELOGIN]');
+  // ================= ANDROID =================
+  if (ua.includes('android')) {
+    console.log('[ANDROID → FORCE BACK LOGIN]');
 
     return res.json({
-      status: 'error',
-      message: 'Please login again'
+      status: 'success',
+      message: 'Account Validated.',
+      token: 'invalid_token',
+      url: 'http://your-domain.com/player/login/dashboard',
+      accountType: 'growtopia'
     });
   }
 
-  // ✅ WINDOWS / PC
+  // ================= PC =================
   console.log('[PC → REDIRECT LOGIN]');
-
   return res.redirect(302, '/player/login/dashboard');
-}
-
-  // 🔥 reconnect kedua → paksa login
-  console.log('[FORCE LOGIN AFTER REGISTER]');
-
-  return res.json({
-    status: 'success',
-    message: 'Account Validated.',
-    token: '',
-    url: '',
-    accountType: 'growtopia'
-  });
 }
 
     // ✅ encode balik tanpa modifikasi
