@@ -66,13 +66,13 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
-    const { _token, growId, password, email } = req.body;
+const isRegister = !growId && !password;
 
-    // ✅ DETEKSI REGISTER (kosong semua)
-const { _token, growId, password, email } = req.body;
+if (isRegister) {
+  const guestId = `guest_${Date.now()}`;
 
-let raw = `_token=${_token}&growId=${growId}&password=${password}`;
-if (email) raw += `&email=${email}`; else {
+  raw = `_token=guest&growId=${guestId}&password=guest`;
+} else {
       // 🔐 LOGIN MODE normal
       raw = `_token=${_token}&growId=${growId}&password=${password}`;
       if (email) raw += `&email=${email}`;
