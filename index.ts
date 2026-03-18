@@ -66,8 +66,12 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
-const isRegister = !growId && !password;
-let raw;
+    const { _token, growId, password, email } = req.body;
+
+    // ✅ DETEKSI REGISTER (kosong semua)
+    const isRegister = !growId && !password;
+
+    let raw;
 
     if (isRegister) {
       // 🔥 REGISTER MODE → kasih dummy
