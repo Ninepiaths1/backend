@@ -135,12 +135,24 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     // ✅ decode tanpa ubah isi
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
 if (decoded.includes('guest=1')) {
-  console.log('[FORCE RELOGIN FINAL]');
+  const ua = (req.headers['user-agent'] || '').toString();
 
-  return res.json({
-    status: 'error',
-    message: 'Please login again'
-  });
+  console.log('[GUEST DETECTED]', ua);
+
+  // ✅ ANDROID
+  if (ua.toLowerCase().includes('android')) {
+    console.log('[ANDROID → FORCE RELOGIN]');
+
+    return res.json({
+      status: 'error',
+      message: 'Please login again'
+    });
+  }
+
+  // ✅ WINDOWS / PC
+  console.log('[PC → REDIRECT LOGIN]');
+
+  return res.redirect(302, '/player/login/dashboard');
 }
 
   // 🔥 reconnect kedua → paksa login
