@@ -68,7 +68,7 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
   try {
     const { _token, growId, password, email } = req.body;
 
-    // ✅ DETEKSI REGISTER (kosong semua)
+    // Register detection ( all kosong )
     const isGuest = !growId && !password;
 
     let raw;
@@ -132,7 +132,7 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
       });
     }
 
-    // ✅ decode tanpa ubah isi
+    // decode tanpa mengubah isinya
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
 if (decoded.includes('guest=1')) {
   const ua = (req.headers['user-agent'] || '').toString().toLowerCase();
@@ -157,7 +157,7 @@ if (decoded.includes('guest=1')) {
   return res.redirect(302, '/player/login/dashboard');
 }
 
-    // ✅ encode balik tanpa modifikasi
+    // encode balik tanpa dimodif
     const token = Buffer.from(decoded).toString('base64');
 
     res.send(JSON.stringify({
