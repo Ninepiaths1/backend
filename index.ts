@@ -66,15 +66,16 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
-    console.log('[BODY]', req.body);
+    console.log('[BODY RAW]', req.body);
 
     let growId = '';
     let password = '';
 
+    // ✅ HANDLE SEMUA FORMAT BODY
     if (typeof req.body === 'object' && req.body !== null) {
       const keys = Object.keys(req.body);
 
-      if (keys.length === 1 && keys[0].includes('growId')) {
+      if (keys.length === 1) {
         const raw = keys[0];
         const params = new URLSearchParams(raw);
 
@@ -86,25 +87,16 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
       }
     }
 
-    // 🔥 DETEKSI REGISTER (kosong dua-duanya)
-if (!growId && !password) {
-  console.log('[REGISTER MODE]');
-  return res.send(JSON.stringify({
-    status: 'success',
-    message: 'Account Validated.',
-    token: Buffer.from(`growId=&password=`).toString('base64'),
-    url: '',
-    accountType: 'growtopia',
-  }));
-}
+    console.log('[PARSED]', growId, password);
 
-    // 🔐 LOGIN MODE
-    console.log('[LOGIN MODE]', growId, password);
+    // 🔥 JANGAN ERROR, WALAU KOSONG
+    const safeGrowId = growId || 'guest';
+    const safePassword = password || 'guest';
 
-    const raw = `growId=${growId}&password=${password}`;
+    const raw = `growId=${safeGrowId}&password=${safePassword}`;
     const token = Buffer.from(raw).toString('base64');
 
-    res.send(JSON.stringify({
+    return res.send(JSON.stringify({
       status: 'success',
       message: 'Account Validated.',
       token,
@@ -114,10 +106,15 @@ if (!growId && !password) {
 
   } catch (error) {
     console.log('[ERROR VALIDATE]:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal Server Error',
-    });
+
+    // 🔥 FALLBACK ANTI CRASH
+    return res.send(JSON.stringify({
+      status: 'success',
+      message: 'Fallback login.',
+      token: Buffer.from('growId=guest&password=guest').toString('base64'),
+      url: '',
+      accountType: 'growtopia',
+    }));
   }
 });
 
