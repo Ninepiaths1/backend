@@ -87,20 +87,16 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
     }
 
     // 🔥 DETEKSI REGISTER (kosong dua-duanya)
-    if (!growId && !password) {
-      console.log('[REGISTER MODE]');
-
-      const raw = `growId=guest&password=guest`;
-      const token = Buffer.from(raw).toString('base64');
-
-      return res.send(JSON.stringify({
-        status: 'success',
-        message: 'Account Validated.',
-        token,
-        url: '',
-        accountType: 'growtopia',
-      }));
-    }
+if (!growId && !password) {
+  console.log('[REGISTER MODE]');
+  return res.send(JSON.stringify({
+    status: 'success',
+    message: 'Account Validated.',
+    token: Buffer.from(`growId=&password=`).toString('base64'),
+    url: '',
+    accountType: 'growtopia',
+  }));
+}
 
     // 🔐 LOGIN MODE
     console.log('[LOGIN MODE]', growId, password);
