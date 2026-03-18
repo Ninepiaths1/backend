@@ -64,91 +64,39 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 });
 
 // ================= LOGIN VALIDATE =================
-let rawBody = '';
-if (typeof req.body === 'object' && req.body !== null) {
-  rawBody = Object.keys(req.body)[0] || '';
-}
+app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
+  try {
+    const { _token, growId, password, email } = req.body;
 
-console.log('[RAW]', rawBody);
+    // ✅ DETEKSI REGISTER (kosong semua)
+    const isRegister = !growId && !password;
 
-// =============================
-// 🟢 REGISTER DETECT
-// =============================
-if (rawBody.includes('requestedName')) {
-  console.log('[MODE] REGISTER CLICK');
+    let raw;
 
-  const guestId = `guest_${Date.now()}`;
-  const raw = `_token=guest&growId=${guestId}&password=guest`;
-  const token = Buffer.from(raw).toString('base64');
+    if (isRegister) {
+      // 🔥 REGISTER MODE → kasih dummy
+      const guestId = `guest_${Date.now()}`;
 
-  return res.json({
-    status: 'success',
-    message: 'Account Validated.',
-    token,
-    url: '',
-    accountType: 'growtopia',
-  });
-}
-
-// =============================
-// 🔵 LOGIN
-// =============================
-if (rawBody.includes('growId=') && rawBody.includes('password=')) {
-  console.log('[MODE] LOGIN');
-
-  const token = Buffer.from(rawBody).toString('base64');
-
-  return res.json({
-    status: 'success',
-    message: 'Account Validated.',
-    token,
-    url: '',
-    accountType: 'growtopia',
-  });
-}
-
-// =============================
-// 🟡 RECONNECT → FORCE LOGIN
-// =============================
-console.log('[MODE] RECONNECT');
-
-return res.json({
-  status: 'error',
-  message: 'Please login',
-});
-
-    // =============================
-    // 🔐 LOGIN NORMAL
-    // =============================
-    if (growId && password) {
-      console.log('[MODE] LOGIN');
-
-      const raw = `_token=${_token}&growId=${growId}&password=${password}`;
-      const token = Buffer.from(raw).toString('base64');
-
-      return res.json({
-        status: 'success',
-        message: 'Account Validated.',
-        token,
-        url: '',
-        accountType: 'growtopia',
-      });
+      raw = `_token=guest&growId=${guestId}&password=guest`;
+      console.log('[REGISTER BYPASS]');
+    } else {
+      // 🔐 LOGIN MODE normal
+      raw = `_token=${_token}&growId=${growId}&password=${password}`;
+      if (email) raw += `&email=${email}`;
     }
 
-    // =============================
-    // ❌ DEFAULT → PAKSA LOGIN
-    // =============================
-    console.log('[MODE] UNKNOWN → FORCE LOGIN');
+    const token = Buffer.from(raw).toString('base64');
 
-    return res.json({
-      status: 'error',
-      message: 'Please login',
-    });
-
+    res.send(JSON.stringify({
+      status: 'success',
+      message: 'Account Validated.',
+      token,
+      url: '',
+      accountType: 'growtopia',
+    }));
   } catch (error) {
-    console.log('[ERROR]:', error);
-
-    return res.status(500).json({
+    console.log(`[ERROR]: ${error}`);
+    res.status(500).json({
       status: 'error',
       message: 'Internal Server Error',
     });
