@@ -65,42 +65,46 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
-  console.log('[BODY]', req.body);
-
   try {
-    let rawData = '';
+    console.log('[BODY]', req.body);
 
-    if (typeof req.body === 'object' && req.body !== null) {
-      const keys = Object.keys(req.body);
-      if (keys.length > 0) {
-        rawData = keys[0];
-      }
-    }
-
-    console.log('[RAW DATA]', rawData);
+    const { _token, growId, password } = req.body;
 
     // =============================
-    // 🆕 REGISTER (NO DATA)
+    // 🆕 REGISTER BUTTON (PERTAMA KALI)
     // =============================
-    if (!rawData || rawData === '') {
-      console.log('[MODE] REGISTER');
+    if (!growId && !password && !_token) {
+      console.log('[MODE] REGISTER CLICK');
 
       return res.json({
         status: 'success',
         message: 'Register OK',
-        token: Buffer.from('growId=&password=').toString('base64'),
+        token: Buffer.from('_token=guest&growId=guest&password=guest').toString('base64'),
         url: '',
         accountType: 'growtopia',
       });
     }
 
     // =============================
-    // 🔐 LOGIN (VALID DATA)
+    // 🔁 RECONNECT (SETELAH CREATE GROWID)
     // =============================
-    if (rawData.includes('growId=') && rawData.includes('password=')) {
+    if (!growId && !password && _token) {
+      console.log('[MODE] RECONNECT → FORCE LOGIN');
+
+      return res.json({
+        status: 'error',
+        message: 'Please login',
+      });
+    }
+
+    // =============================
+    // 🔐 LOGIN NORMAL
+    // =============================
+    if (growId && password) {
       console.log('[MODE] LOGIN');
 
-      const token = Buffer.from(rawData).toString('base64');
+      const raw = `_token=${_token}&growId=${growId}&password=${password}`;
+      const token = Buffer.from(raw).toString('base64');
 
       return res.json({
         status: 'success',
@@ -112,24 +116,25 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
     }
 
     // =============================
-    // ❌ INVALID → PAKSA LOGIN FORM
+    // ❌ DEFAULT → PAKSA LOGIN
     // =============================
-    console.log('[MODE] INVALID');
+    console.log('[MODE] UNKNOWN → FORCE LOGIN');
 
     return res.json({
       status: 'error',
       message: 'Please login',
     });
 
-  } catch (err) {
-    console.log('[ERROR]', err);
+  } catch (error) {
+    console.log('[ERROR]:', error);
 
-    return res.json({
+    return res.status(500).json({
       status: 'error',
-      message: 'Login required',
+      message: 'Internal Server Error',
     });
   }
 });
+
 // ================= CHECKTOKEN REDIRECT =================
 app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
   return res.redirect(307, '/player/growid/validate/checktoken');
