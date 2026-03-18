@@ -134,14 +134,10 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
 
     // ✅ decode tanpa ubah isi
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
-      if (decoded.includes('guest=1')) {
-  console.log('[FORCE LOGIN PAGE - GUEST BLOCKED]');
+if (decoded.includes('guest=1')) {
+  console.log('[FORCE REDIRECT TO LOGIN]');
 
-  return res.json({
-    status: 'error',
-    message: 'Guest session expired',
-    url: '/player/login/dashboard'
-  });
+  return res.redirect(302, '/player/login/dashboard');
 }
 
     // ✅ encode balik tanpa modifikasi
