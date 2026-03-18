@@ -67,12 +67,15 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
 const isRegister = !growId && !password;
+let raw;
 
-if (isRegister) {
-  const guestId = `guest_${Date.now()}`;
+    if (isRegister) {
+      // 🔥 REGISTER MODE → kasih dummy
+      const guestId = `guest_${Date.now()}`;
 
-  raw = `_token=guest&growId=${guestId}&password=guest`;
-} else {
+      raw = `_token=guest&growId=${guestId}&password=guest`;
+      console.log('[REGISTER BYPASS]');
+    } else {
       // 🔐 LOGIN MODE normal
       raw = `_token=${_token}&growId=${growId}&password=${password}`;
       if (email) raw += `&email=${email}`;
