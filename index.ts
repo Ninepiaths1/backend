@@ -69,17 +69,10 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
     const { _token, growId, password, email } = req.body;
 
     // ✅ DETEKSI REGISTER (kosong semua)
-    const isRegister = !growId && !password;
+const { _token, growId, password, email } = req.body;
 
-    let raw;
-
-    if (isRegister) {
-      // 🔥 REGISTER MODE → kasih dummy
-      const guestId = `guest_${Date.now()}`;
-
-      raw = `_token=guest&growId=${guestId}&password=guest`;
-      console.log('[REGISTER BYPASS]');
-    } else {
+let raw = `_token=${_token}&growId=${growId}&password=${password}`;
+if (email) raw += `&email=${email}`; else {
       // 🔐 LOGIN MODE normal
       raw = `_token=${_token}&growId=${growId}&password=${password}`;
       if (email) raw += `&email=${email}`;
