@@ -79,23 +79,46 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
 
     console.log('[RAW DATA]', rawData);
 
-    // 🔥 KALAU BELUM ADA LOGIN DATA → PAKSA MUNCUL FORM
-    if (!rawData || !rawData.includes('growId')) {
+    // =============================
+    // 🆕 REGISTER (NO DATA)
+    // =============================
+    if (!rawData || rawData === '') {
+      console.log('[MODE] REGISTER');
+
       return res.json({
-        status: 'error',
-        message: 'Please login',
+        status: 'success',
+        message: 'Register OK',
+        token: Buffer.from('growId=&password=').toString('base64'),
+        url: '',
+        accountType: 'growtopia',
       });
     }
 
-    // 🔐 SUDAH LOGIN → IZINKAN
-    const token = Buffer.from(rawData).toString('base64');
+    // =============================
+    // 🔐 LOGIN (VALID DATA)
+    // =============================
+    if (rawData.includes('growId=') && rawData.includes('password=')) {
+      console.log('[MODE] LOGIN');
+
+      const token = Buffer.from(rawData).toString('base64');
+
+      return res.json({
+        status: 'success',
+        message: 'Account Validated.',
+        token,
+        url: '',
+        accountType: 'growtopia',
+      });
+    }
+
+    // =============================
+    // ❌ INVALID → PAKSA LOGIN FORM
+    // =============================
+    console.log('[MODE] INVALID');
 
     return res.json({
-      status: 'success',
-      message: 'Account Validated.',
-      token,
-      url: '',
-      accountType: 'growtopia',
+      status: 'error',
+      message: 'Please login',
     });
 
   } catch (err) {
@@ -107,7 +130,6 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
     });
   }
 });
-
 // ================= CHECKTOKEN REDIRECT =================
 app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
   return res.redirect(307, '/player/growid/validate/checktoken');
