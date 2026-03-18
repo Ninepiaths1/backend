@@ -135,15 +135,11 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     // ✅ decode tanpa ubah isi
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
 if (decoded.includes('guest=1')) {
-  console.log('[FORCE BACK TO LOGIN AFTER RECONNECT]');
+  console.log('[FORCE RELOGIN FINAL]');
 
-  // 🔥 kirim response kosong tapi SUCCESS
   return res.json({
-    status: 'success',
-    message: 'Account Validated.',
-    token: '',
-    url: '',
-    accountType: 'growtopia'
+    status: 'error',
+    message: 'Please login again'
   });
 }
 
