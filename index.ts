@@ -138,14 +138,13 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     // ✅ encode balik tanpa modifikasi
     const token = Buffer.from(decoded).toString('base64');
 
-    res.send(JSON.stringify({
-      status: 'success',
-      message: 'Account Validated.',
-      token,
-      url: '',
-      accountType: 'growtopia',
-      accountAge: 2,
-    }));
+res.send(JSON.stringify({
+  status: 'success',
+  message: 'Account Validated.',
+  token: Buffer.from(`growId=${growId}&password=${password}`).toString('base64'),
+  url: '',
+  accountType: 'growtopia',
+}));
   } catch (error) {
     console.log(`[ERROR]: ${error}`);
     res.json({
