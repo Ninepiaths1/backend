@@ -1,148 +1,3 @@
-Bexxper
-bexxper
-In voice
-
-Bexxper [PRO],  — 12/03/2026 19:40
-1 - Download App called: "Surge 5" from App Store. Surge 5 IOS
-2 - Press "OK",
-3 - Click on "Default.conf".
-4 - Click on "IMPORT" part - Download Profile from URL.
-5 - Put url "https://ios.gtpshost.com/secretnewera" when click IOS host button above and click "OK" and "Done"
-6 - Press "SETUP" and then agree to policy by clicking "OK" and "Allow" for VPN Configuration!.
-7 - Done, then open "Growtopia" and Connect!
-Bexxper [PRO],  — 12/03/2026 22:26
-Kartel
-kontol123#
-Bexxper [PRO],  — 14/03/2026 10:42
-Image
-Image
-Image
-Image
-Image
-Bexxper [PRO],  — 14/03/2026 18:50
-To : dr. Faradiesa Sp.PD and Family
-
-Happy Eid Mubarak 1447 H
-
-May Allah bless you with happiness, good health, and prosperity on this special day. May your home be filled with warmth, love, and gratitude.
-
-From : dr. Haneng Sp.PD and Family
-Bexxper [PRO],  — 17/03/2026 19:49
-https://docs.google.com/spreadsheets/u/0/d/14Vebb55DN6UqQtluu9VRO0FjPfGXCqbahMaiaHmefnE/htmlview
-Google Docs
-DATA UNIV METAS
-Image
-Image
-Bexxper [PRO],  — 17/03/2026 20:14
-Image
-Bexxper [PRO],  — 17/03/2026 20:34
-
-<!DOCTYPE html>
-<html
-    lang="en"
-    style="background-color: rgba(0, 0, 0, 0); width: 100%; height: 100%"
->
-
-message.txt
-16 KB
-Bexxper [PRO],  — 17/03/2026 21:10
-import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import rateLimit from 'express-rate-limit';
-import path from 'path';
-import fs from 'fs';
-
-message.txt
-5 KB
-Bexxper [PRO],  — Yesterday at 01:23
-Image
-Bexxper [PRO],  — Yesterday at 21:21
-import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import rateLimit from 'express-rate-limit';
-import path from 'path';
-import fs from 'fs';
-
-message.txt
-5 KB
-Bexxper [PRO],  — Yesterday at 23:42
-0: OnDialogRequest
-1: text_scaling_string|Dirttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt|
-set_border_color|255,255,255,250
-set_bg_color|0,0,0,135|`o
-add_label_with_icon|big|`wGet a GrowID``|left|206|
-add_spacer|small|
-add_textbox|By choosing a `wGrowID``, you can use a name and password to logon from any device.Your `wname`` will be shown to other players!|left|
-add_textbox|Select your sex:|left|
-max_checks|1|
-text_scaling_string|Woman|
-add_checkicon|man|Man||9834||0|
-add_checkicon|woman|Woman||9836||0|
-add_button_with_icon||END_LIST|noflags|0||
-add_spacer|small|
-add_text_input|logon|Name||18|
-add_textbox|Your `wpassword`` must contain `w8 to 18 characters, 1 letter, 1 number`` and `w1 special character: @#!$^&*.,``|left|
-add_text_input_password|password|Password||18|
-add_text_input_password|password_verify|Password Verify||18|
-add_textbox|Your `wemail`` will only be used for account verification and support. If you enter a fake email, you can't verify your account, recover or change your password.|left|
-add_text_input|email|Email||64|
-add_textbox|We will never ask you for your password or email, never share it with anyone!|left|
-end_dialog|growid_apply||Get My GrowID!|
-
-
-
-0: OnDialogRequest
-1:
-add_label|big|Your account have been registered|center|
-add_spacer|small|
-add_textbox|You have registered an account to SecretPS please press button below to reconnect to the server with your new GrowID!|
-add_spacer|small|
-add_button|disconnect|Reconnect|
-end_dialog|dmps_authorizations|||
-
-[sendpacket] type: 2
-action|dialog_return
-dialog_name|dmps_authorizations
-buttonClicked|disconnect
-[
-    {
-        "cache": "secret.rizqn.my.id",
-        "creator": ["Ninepiaths"],
-        "discord": "",
-        "folders": "cache/",
-        "ip": "127.0.0.1",
-        "maintenance": false,
-        "name": "SecretPS",
-      "port": 17091,
-
-      "redirect": {
-        "active": false,
-        "s_port":  17092
-      }
-    }
-]
-                {
-                    packet_(peer, "`4ALREADY ON?! `o: This account was already online, kicking it off so you can log on. (if you were just playing before, this is nothing to worry about)");
-                    packet_(peer, "action|logon_fail");
-                    enet_peer_disconnect_later(peer, 0);
-                    return false;
-                }
-                case -1:
-                {
-
-                    std::cout << "[BYPASS LOGIN] " << pInfo(peer)->temporary_tankIDName << std::endl;
-                    break;
-                }
-Bexxper [PRO],  — 02:24
-import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import rateLimit from 'express-rate-limit';
-import path from 'path';
-import fs from 'fs';
-
-message.txt
-5 KB
-﻿
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -278,7 +133,8 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     }
 
     // ✅ decode tanpa ubah isi
-    if (decoded.includes('guest=1')) {
+    const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
+      if (decoded.includes('guest=1')) {
   console.log('[FORCE LOGIN PAGE - GUEST BLOCKED]');
 
   return res.json({
@@ -313,5 +169,3 @@ app.listen(PORT, () => {
 });
 
 export default app;
-message.txt
-5 KB
