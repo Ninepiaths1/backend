@@ -64,41 +64,58 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 });
 
 // ================= LOGIN VALIDATE =================
-app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
-  try {
-    console.log('[BODY]', req.body);
-
-    const { _token, growId, password } = req.body;
-
-    // =============================
-    // 🆕 REGISTER BUTTON (PERTAMA KALI)
-    // =============================
-const isRegister = !growId && !password && !_token;
-const isReconnect = !growId && !password && _token;
-
-let raw;
-
-// =============================
-// 🟢 REGISTER (PERTAMA)
-// =============================
-if (isRegister) {
-  const guestId = `guest_${Date.now()}`;
-
-  raw = `_token=guest&growId=${guestId}&password=guest`;
-  console.log('[REGISTER BYPASS]');
+let rawBody = '';
+if (typeof req.body === 'object' && req.body !== null) {
+  rawBody = Object.keys(req.body)[0] || '';
 }
 
+console.log('[RAW]', rawBody);
+
 // =============================
-// 🟡 RECONNECT (SETELAH CREATE)
+// 🟢 REGISTER DETECT
 // =============================
-else if (isReconnect) {
-  console.log('[RECONNECT → FORCE LOGIN]');
+if (rawBody.includes('requestedName')) {
+  console.log('[MODE] REGISTER CLICK');
+
+  const guestId = `guest_${Date.now()}`;
+  const raw = `_token=guest&growId=${guestId}&password=guest`;
+  const token = Buffer.from(raw).toString('base64');
 
   return res.json({
-    status: 'error',
-    message: 'Please login',
+    status: 'success',
+    message: 'Account Validated.',
+    token,
+    url: '',
+    accountType: 'growtopia',
   });
 }
+
+// =============================
+// 🔵 LOGIN
+// =============================
+if (rawBody.includes('growId=') && rawBody.includes('password=')) {
+  console.log('[MODE] LOGIN');
+
+  const token = Buffer.from(rawBody).toString('base64');
+
+  return res.json({
+    status: 'success',
+    message: 'Account Validated.',
+    token,
+    url: '',
+    accountType: 'growtopia',
+  });
+}
+
+// =============================
+// 🟡 RECONNECT → FORCE LOGIN
+// =============================
+console.log('[MODE] RECONNECT');
+
+return res.json({
+  status: 'error',
+  message: 'Please login',
+});
 
     // =============================
     // 🔐 LOGIN NORMAL
