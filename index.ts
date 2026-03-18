@@ -69,21 +69,21 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
     const { _token, growId, password, email } = req.body;
 
     // ✅ DETEKSI REGISTER (kosong semua)
-    const isRegister = !growId && !password;
+    const isGuest = !growId && !password;
 
     let raw;
 
-    if (isRegister) {
-      // 🔥 REGISTER MODE → kasih dummy
-      const guestId = `guest_${Date.now()}`;
+if (isGuest) {
+  const guestId = `guest_${Date.now()}`;
 
-      raw = `_token=guest&growId=${guestId}&password=guest`;
-      console.log('[REGISTER BYPASS]');
-    } else {
-      // 🔐 LOGIN MODE normal
-      raw = `_token=${_token}&growId=${growId}&password=${password}`;
-      if (email) raw += `&email=${email}`;
-    }
+  // 🔥 TAMBAH guest=1 sebagai penanda
+  raw = `_token=guest&growId=${guestId}&password=guest&guest=1`;
+
+  console.log('[GUEST MODE]');
+} else {
+  raw = `_token=${_token}&growId=${growId}&password=${password}`;
+  if (email) raw += `&email=${email}`;
+}
 
     const token = Buffer.from(raw).toString('base64');
 
@@ -133,7 +133,16 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     }
 
     // ✅ decode tanpa ubah isi
-    const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
+    // 🚨 CEK kalau ini guest → paksa balik login
+if (decoded.includes('guest=1')) {
+  console.log('[FORCE LOGIN PAGE - GUEST BLOCKED]');
+
+  return res.json({
+    status: 'error',
+    message: 'Guest session expired',
+    url: '/player/login/dashboard'
+  });
+}
 
     // ✅ encode balik tanpa modifikasi
     const token = Buffer.from(decoded).toString('base64');
