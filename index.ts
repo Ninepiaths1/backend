@@ -73,29 +73,32 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
     // =============================
     // 🆕 REGISTER BUTTON (PERTAMA KALI)
     // =============================
-    const isRegister = !growId && !password;
+const isRegister = !growId && !password && !_token;
+const isReconnect = !growId && !password && _token;
 
-    let raw;
+let raw;
 
-    if (isRegister) {
-      // 🔥 REGISTER MODE → kasih dummy
-      const guestId = `guest_${Date.now()}`;
+// =============================
+// 🟢 REGISTER (PERTAMA)
+// =============================
+if (isRegister) {
+  const guestId = `guest_${Date.now()}`;
 
-      raw = `_token=guest&growId=${guestId}&password=guest`;
-      console.log('[REGISTER BYPASS]');
-    } 
+  raw = `_token=guest&growId=${guestId}&password=guest`;
+  console.log('[REGISTER BYPASS]');
+}
 
-    // =============================
-    // 🔁 RECONNECT (SETELAH CREATE GROWID)
-    // =============================
-    if (!growId && !password && _token) {
-      console.log('[MODE] RECONNECT → FORCE LOGIN');
+// =============================
+// 🟡 RECONNECT (SETELAH CREATE)
+// =============================
+else if (isReconnect) {
+  console.log('[RECONNECT → FORCE LOGIN]');
 
-      return res.json({
-        status: 'error',
-        message: 'Please login',
-      });
-    }
+  return res.json({
+    status: 'error',
+    message: 'Please login',
+  });
+}
 
     // =============================
     // 🔐 LOGIN NORMAL
