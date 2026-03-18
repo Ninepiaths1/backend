@@ -66,25 +66,36 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
-    const { _token, growId, password, email } = req.body;
+    let growId = '';
+    let password = '';
 
-    // ✅ DETEKSI REGISTER (kosong semua)
-    const isRegister = !growId && !password;
+    // ✅ handle body aneh dari Growtopia
+    if (typeof req.body === 'object' && req.body !== null) {
+      const keys = Object.keys(req.body);
 
-    let raw;
+      if (keys.length === 1 && keys[0].includes('growId')) {
+        const raw = keys[0];
+        const params = new URLSearchParams(raw);
 
-    if (isRegister) {
-      // 🔥 REGISTER MODE → kasih dummy
-      const guestId = `guest_${Date.now()}`;
-
-      raw = `_token=guest&growId=${guestId}&password=guest`;
-      console.log('[REGISTER BYPASS]');
-    } else {
-      // 🔐 LOGIN MODE normal
-      raw = `_token=${_token}&growId=${growId}&password=${password}`;
-      if (email) raw += `&email=${email}`;
+        growId = params.get('growId') || '';
+        password = params.get('password') || '';
+      } else {
+        growId = req.body.growId || '';
+        password = req.body.password || '';
+      }
     }
 
+    console.log('[LOGIN DATA]', growId, password);
+
+    // ❌ kalau kosong, jangan crash
+    if (!growId || !password) {
+      return res.json({
+        status: 'error',
+        message: 'Missing growId or password',
+      });
+    }
+
+    const raw = `growId=${growId}&password=${password}`;
     const token = Buffer.from(raw).toString('base64');
 
     res.send(JSON.stringify({
@@ -94,8 +105,9 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
       url: '',
       accountType: 'growtopia',
     }));
+
   } catch (error) {
-    console.log(`[ERROR]: ${error}`);
+    console.log('[ERROR VALIDATE]:', error);
     res.status(500).json({
       status: 'error',
       message: 'Internal Server Error',
