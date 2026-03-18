@@ -65,50 +65,46 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
-  console.log('[RAW BODY]', req.body);
+  console.log('[BODY]', req.body);
 
   try {
     let rawData = '';
 
-    // ✅ ambil raw payload apapun bentuknya
     if (typeof req.body === 'object' && req.body !== null) {
       const keys = Object.keys(req.body);
-
       if (keys.length > 0) {
-        rawData = keys[0]; // biasanya format aneh GT
+        rawData = keys[0];
       }
-    }
-
-    // fallback kalau kosong
-    if (!rawData || !rawData.includes('=')) {
-      rawData = 'growId=guest&password=guest';
     }
 
     console.log('[RAW DATA]', rawData);
 
-    // ❌ JANGAN parsing ribet dulu
-    // langsung encode aja
+    // 🔥 KALAU BELUM ADA LOGIN DATA → PAKSA MUNCUL FORM
+    if (!rawData || !rawData.includes('growId')) {
+      return res.json({
+        status: 'error',
+        message: 'Please login',
+      });
+    }
+
+    // 🔐 SUDAH LOGIN → IZINKAN
     const token = Buffer.from(rawData).toString('base64');
 
-    return res.send(JSON.stringify({
+    return res.json({
       status: 'success',
       message: 'Account Validated.',
       token,
       url: '',
       accountType: 'growtopia',
-    }));
+    });
 
   } catch (err) {
-    console.log('[FATAL ERROR]', err);
+    console.log('[ERROR]', err);
 
-    // 🔥 HARD FAILSAFE (TIDAK BOLEH ERROR)
-    return res.send(JSON.stringify({
-      status: 'success',
-      message: 'Fallback.',
-      token: Buffer.from('growId=guest&password=guest').toString('base64'),
-      url: '',
-      accountType: 'growtopia',
-    }));
+    return res.json({
+      status: 'error',
+      message: 'Login required',
+    });
   }
 });
 
