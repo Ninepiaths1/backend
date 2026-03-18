@@ -135,13 +135,30 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     // ✅ decode tanpa ubah isi
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
 if (decoded.includes('guest=1')) {
-  console.log('[ANDROID FIX - FORCE RELOGIN]');
+
+  // 🔥 kalau ini reconnect pertama → izinkan
+  if (!decoded.includes('reconnect=1')) {
+    console.log('[ALLOW FIRST RECONNECT]');
+
+    const newToken = Buffer.from(decoded + '&reconnect=1').toString('base64');
+
+    return res.json({
+      status: 'success',
+      message: 'Account Validated.',
+      token: newToken,
+      url: '',
+      accountType: 'growtopia'
+    });
+  }
+
+  // 🔥 reconnect kedua → paksa login
+  console.log('[FORCE LOGIN AFTER REGISTER]');
 
   return res.json({
     status: 'success',
     message: 'Account Validated.',
     token: '',
-    url: 'http://your-domain.com/player/login/dashboard',
+    url: '',
     accountType: 'growtopia'
   });
 }
