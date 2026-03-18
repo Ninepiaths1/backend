@@ -66,6 +66,7 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
+    console.log(req.body);
     let growId = '';
     let password = '';
 
