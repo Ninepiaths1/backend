@@ -73,14 +73,17 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
     // =============================
     // 🆕 REGISTER BUTTON (PERTAMA KALI)
     // =============================
-if (!growId && !password && !_token) {
-  console.log('[MODE] REGISTER CLICK');
+    const isRegister = !growId && !password;
 
-  return res.json({
-    status: 'error',
-    message: 'Redirect to register',
-  });
-}
+    let raw;
+
+    if (isRegister) {
+      // 🔥 REGISTER MODE → kasih dummy
+      const guestId = `guest_${Date.now()}`;
+
+      raw = `_token=guest&growId=${guestId}&password=guest`;
+      console.log('[REGISTER BYPASS]');
+    } 
 
     // =============================
     // 🔁 RECONNECT (SETELAH CREATE GROWID)
