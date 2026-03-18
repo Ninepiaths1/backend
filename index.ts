@@ -66,11 +66,11 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
-    console.log(req.body);
+    console.log('[BODY]', req.body);
+
     let growId = '';
     let password = '';
 
-    // ✅ handle body aneh dari Growtopia
     if (typeof req.body === 'object' && req.body !== null) {
       const keys = Object.keys(req.body);
 
@@ -86,15 +86,24 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
       }
     }
 
-    console.log('[LOGIN DATA]', growId, password);
+    // 🔥 DETEKSI REGISTER (kosong dua-duanya)
+    if (!growId && !password) {
+      console.log('[REGISTER MODE]');
 
-    // ❌ kalau kosong, jangan crash
-    if (!growId || !password) {
-      return res.json({
-        status: 'error',
-        message: 'Missing growId or password',
-      });
+      const raw = `growId=guest&password=guest`;
+      const token = Buffer.from(raw).toString('base64');
+
+      return res.send(JSON.stringify({
+        status: 'success',
+        message: 'Account Validated.',
+        token,
+        url: '',
+        accountType: 'growtopia',
+      }));
     }
+
+    // 🔐 LOGIN MODE
+    console.log('[LOGIN MODE]', growId, password);
 
     const raw = `growId=${growId}&password=${password}`;
     const token = Buffer.from(raw).toString('base64');
