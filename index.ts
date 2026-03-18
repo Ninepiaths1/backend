@@ -76,15 +76,9 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
 if (!growId && !password && !_token) {
   console.log('[MODE] REGISTER CLICK');
 
-  const raw = `growId=guest&password=guest`; // 🔥 TANPA _token
-  const token = Buffer.from(raw).toString('base64');
-
   return res.json({
-    status: 'success',
-    message: 'Account Validated.',
-    token,
-    url: '',
-    accountType: 'growtopia',
+    status: 'error',
+    message: 'Redirect to register',
   });
 }
 
