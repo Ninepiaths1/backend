@@ -1,100 +1,28 @@
-import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import rateLimit from 'express-rate-limit';
-import path from 'path';
-import fs from 'fs';
-
-const app = express();
-const PORT = 3000;
-
-app.set('trust proxy', 1);
-app.disable('x-powered-by');
-
-// middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cors());
-
-// rate limiter
-const limiter = rateLimit({
-  windowMs: 60_000,
-  max: 50,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use(limiter);
-
-// static
-app.use(express.static(path.join(process.cwd(), 'public')));
-
-// logger
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const clientIp =
-    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-    req.socket.remoteAddress ||
-    'unknown';
-
-  console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
-  next();
-});
-
-// root
-app.get('/', (_req: Request, res: Response) => {
-  res.send('Hello, world!');
-});
-
-// ================= DASHBOARD =================
-app.all('/player/login/dashboard', async (req: Request, res: Response) => {
-  const body = req.body;
-  let clientData = '';
-
-  if (body && typeof body === 'object' && Object.keys(body).length > 0) {
-    clientData = Object.keys(body)[0];
-  }
-
-  const encodedClientData = Buffer.from(clientData).toString('base64');
-
-  const templatePath = path.join(process.cwd(), 'template', 'dashboard.html');
-  const templateContent = fs.readFileSync(templatePath, 'utf-8');
-
-  const htmlContent = templateContent.replace('{{ data }}', encodedClientData);
-
-  res.setHeader('Content-Type', 'text/html');
-  res.send(htmlContent);
-});
-
-// ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
+  console.log('[RAW BODY]', req.body);
+
   try {
-    console.log('[BODY RAW]', req.body);
+    let rawData = '';
 
-    let growId = '';
-    let password = '';
-
-    // ✅ HANDLE SEMUA FORMAT BODY
+    // ✅ ambil raw payload apapun bentuknya
     if (typeof req.body === 'object' && req.body !== null) {
       const keys = Object.keys(req.body);
 
-      if (keys.length === 1) {
-        const raw = keys[0];
-        const params = new URLSearchParams(raw);
-
-        growId = params.get('growId') || '';
-        password = params.get('password') || '';
-      } else {
-        growId = req.body.growId || '';
-        password = req.body.password || '';
+      if (keys.length > 0) {
+        rawData = keys[0]; // biasanya format aneh GT
       }
     }
 
-    console.log('[PARSED]', growId, password);
+    // fallback kalau kosong
+    if (!rawData || !rawData.includes('=')) {
+      rawData = 'growId=guest&password=guest';
+    }
 
-    // 🔥 JANGAN ERROR, WALAU KOSONG
-    const safeGrowId = growId || 'guest';
-    const safePassword = password || 'guest';
+    console.log('[RAW DATA]', rawData);
 
-    const raw = `growId=${safeGrowId}&password=${safePassword}`;
-    const token = Buffer.from(raw).toString('base64');
+    // ❌ JANGAN parsing ribet dulu
+    // langsung encode aja
+    const token = Buffer.from(rawData).toString('base64');
 
     return res.send(JSON.stringify({
       status: 'success',
@@ -104,73 +32,16 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
       accountType: 'growtopia',
     }));
 
-  } catch (error) {
-    console.log('[ERROR VALIDATE]:', error);
+  } catch (err) {
+    console.log('[FATAL ERROR]', err);
 
-    // 🔥 FALLBACK ANTI CRASH
+    // 🔥 HARD FAILSAFE (TIDAK BOLEH ERROR)
     return res.send(JSON.stringify({
       status: 'success',
-      message: 'Fallback login.',
+      message: 'Fallback.',
       token: Buffer.from('growId=guest&password=guest').toString('base64'),
       url: '',
       accountType: 'growtopia',
     }));
   }
 });
-
-// ================= CHECKTOKEN REDIRECT =================
-app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
-  return res.redirect(307, '/player/growid/validate/checktoken');
-});
-
-// ================= CHECKTOKEN VALIDATE (FIXED) =================
-app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
-  try {
-    let refreshToken: string | undefined;
-
-    if (typeof req.body === 'object' && req.body !== null) {
-      const formData = req.body as Record<string, string>;
-
-      if ('refreshToken' in formData) {
-        refreshToken = formData.refreshToken;
-      } else if (Object.keys(formData).length === 1) {
-        const rawPayload = Object.keys(formData)[0];
-        const params = new URLSearchParams(rawPayload);
-        refreshToken = params.get('refreshToken') || undefined;
-      }
-    }
-
-    if (!refreshToken) {
-      return res.json({
-        status: 'error',
-        message: 'Missing refreshToken',
-      });
-    }
-
-    // ✅ decode tanpa ubah isi
-    const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
-
-    // ✅ encode balik tanpa modifikasi
-    const token = Buffer.from(decoded).toString('base64');
-
-res.send(JSON.stringify({
-  status: 'success',
-  message: 'Account Validated.',
-  token: Buffer.from(`growId=${growId}&password=${password}`).toString('base64'),
-  url: '',
-  accountType: 'growtopia',
-}));
-  } catch (error) {
-    console.log(`[ERROR]: ${error}`);
-    res.json({
-      status: 'error',
-      message: 'Internal Server Error',
-    });
-  }
-});
-
-app.listen(PORT, () => {
-  console.log(`[SERVER] Running on http://localhost:${PORT}`);
-});
-
-export default app;
