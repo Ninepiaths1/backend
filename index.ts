@@ -28,7 +28,7 @@ app.use(limiter);
 app.use(express.static(path.join(process.cwd(), 'public')));
 
 // logger
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.use((req: Request, _res: Response, next: NextFunction) => {
   const clientIp =
     (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
     req.socket.remoteAddress ||
@@ -68,32 +68,30 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
   try {
     const { _token, growId, password, email } = req.body;
 
-    // Register detection ( all kosong )
     const isGuest = !growId && !password;
 
-    let raw;
+    let raw: string;
 
-if (isGuest) {
-  const guestId = `guest_${Date.now()}`;
+    if (isGuest) {
+      const guestId = `guest_${Date.now()}`;
 
-  // 🔥 TAMBAH guest=1 sebagai penanda
-  raw = `_token=guest&growId=${guestId}&password=guest&guest=1`;
+      raw = `_token=guest&growId=${guestId}&password=guest&guest=1`;
 
-  console.log('[GUEST MODE]');
-} else {
-  raw = `_token=${_token}&growId=${growId}&password=${password}`;
-  if (email) raw += `&email=${email}`;
-}
+      console.log('[GUEST MODE]');
+    } else {
+      raw = `_token=${_token}&growId=${growId}&password=${password}`;
+      if (email) raw += `&email=${email}`;
+    }
 
     const token = Buffer.from(raw).toString('base64');
 
-    res.send(JSON.stringify({
+    res.json({
       status: 'success',
       message: 'Account Validated.',
       token,
       url: '',
       accountType: 'growtopia',
-    }));
+    });
   } catch (error) {
     console.log(`[ERROR]: ${error}`);
     res.status(500).json({
@@ -108,7 +106,7 @@ app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
   return res.redirect(307, '/player/growid/validate/checktoken');
 });
 
-// ================= CHECKTOKEN VALIDATE (FIXED) =================
+// ================= CHECKTOKEN VALIDATE (FINAL FIX) =================
 app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
   try {
     let refreshToken: string | undefined;
@@ -132,42 +130,33 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
       });
     }
 
-    // decode tanpa mengubah isinya
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
-if (decoded.includes('guest=1')) {
-  const ua = (req.headers['user-agent'] || '').toString().toLowerCase();
 
-  console.log('[GUEST DETECTED]', ua);
+    // 🔥 GUEST FLOW FIX
+    if (decoded.includes('guest=1')) {
+      console.log('[GUEST → DISCONNECT + OPEN DASHBOARD]');
 
-  // ================= ANDROID =================
-  if (ua.includes('android')) {
-    console.log('[ANDROID → FORCE BACK LOGIN]');
+      return res.json({
+        status: 'success',
+        message: 'Please login again.',
+        token: 'invalid_token', // paksa disconnect
+        url: 'http://backend-beta-pied-79.vercel.app:3000/player/login/dashboard', // 🔥 ganti ke domain kamu
+        accountType: 'growtopia'
+      });
+    }
 
-    return res.json({
-      status: 'success',
-      message: 'Account Validated.',
-      token: 'invalid_token',
-      url: 'http://your-domain.com/player/login/dashboard',
-      accountType: 'growtopia'
-    });
-  }
-
-  // ================= PC =================
-  console.log('[PC → REDIRECT LOGIN]');
-  return res.redirect(302, '/player/login/dashboard');
-}
-
-    // encode balik tanpa dimodif
+    // normal user
     const token = Buffer.from(decoded).toString('base64');
 
-    res.send(JSON.stringify({
+    res.json({
       status: 'success',
       message: 'Account Validated.',
       token,
       url: '',
       accountType: 'growtopia',
       accountAge: 2,
-    }));
+    });
+
   } catch (error) {
     console.log(`[ERROR]: ${error}`);
     res.json({
@@ -177,6 +166,7 @@ if (decoded.includes('guest=1')) {
   }
 });
 
+// ================= START SERVER =================
 app.listen(PORT, () => {
   console.log(`[SERVER] Running on http://localhost:${PORT}`);
 });
