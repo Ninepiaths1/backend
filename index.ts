@@ -140,7 +140,7 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
         status: 'success',
         message: 'Please login again.',
         token: 'invalid_token', // paksa disconnect
-        url: 'http://backend-beta-pied-79.vercel.app:3000/player/login/dashboard', // 🔥 ganti ke domain kamu
+        url: 'https://backend-beta-pied-79.vercel.app/player/login/dashboard', // 🔥 ganti ke domain kamu
         accountType: 'growtopia'
       });
     }
