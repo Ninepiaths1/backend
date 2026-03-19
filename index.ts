@@ -133,17 +133,21 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
 
     // 🔥 GUEST FLOW FIX
-    if (decoded.includes('guest=1')) {
-      console.log('[GUEST → DISCONNECT + OPEN DASHBOARD]');
+    const isGuest =
+  decoded.includes('guest=1') ||
+  decoded.includes('growId=guest_');
 
-      return res.json({
-        status: 'success',
-        message: 'Please login again.',
-        token: 'invalid_token', // paksa disconnect
-        url: 'https://backend-beta-pied-79.vercel.app/player/login/dashboard', // 🔥 ganti ke domain kamu
-        accountType: 'growtopia'
-      });
-    }
+if (isGuest) {
+  console.log('[FORCE DASHBOARD] Guest detected:', decoded);
+
+  return res.json({
+    status: 'success',
+    message: 'Please login again.',
+    token: 'invalid_token',
+    url: 'https://backend-beta-pied-79.vercel.app/player/login/dashboard',
+    accountType: 'growtopia'
+  });
+}
 
     // normal user
     const token = Buffer.from(decoded).toString('base64');
