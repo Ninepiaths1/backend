@@ -37,12 +37,25 @@ app.get('/', (_req: Request, res: Response) => {
   res.send('GTPS BYPASS RUNNING');
 });
 
-// ================= LOGIN VALIDATE =================
+
+// =====================================================
+// 🔥 FIX DASHBOARD (ANTI ERROR + AUTO BYPASS)
+// =====================================================
+app.all('/player/login/dashboard', (req: Request, res: Response) => {
+  console.log('[DASHBOARD BYPASS]');
+
+  // langsung lanjut ke checktoken
+  return res.redirect(307, '/player/growid/checktoken');
+});
+
+
+// =====================================================
+// 🔥 LOGIN VALIDATE (PAKAI requestedName)
+// =====================================================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
     let requestedName = 'Player';
 
-    // 🔥 HANDLE FORMAT BODY GT (normal / encoded)
     if (typeof req.body === 'object' && req.body !== null) {
       const formData = req.body as Record<string, string>;
 
@@ -56,7 +69,7 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
       }
     }
 
-    // 🔥 VALIDASI NAMA
+    // validasi nama
     if (!requestedName || requestedName.length < 3) {
       requestedName = 'Player';
     }
@@ -71,7 +84,7 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
       status: 'success',
       message: 'Auto Login Success',
       token,
-      url: '', // kosong = tidak ke dashboard
+      url: '', // penting: kosong biar gak ke dashboard
       accountType: 'growtopia',
     }));
   } catch (error) {
@@ -83,12 +96,18 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
   }
 });
 
-// ================= CHECKTOKEN REDIRECT =================
+
+// =====================================================
+// 🔥 CHECKTOKEN REDIRECT
+// =====================================================
 app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
   return res.redirect(307, '/player/growid/validate/checktoken');
 });
 
-// ================= CHECKTOKEN VALIDATE =================
+
+// =====================================================
+// 🔥 CHECKTOKEN VALIDATE (NO DASHBOARD, NO LOOP)
+// =====================================================
 app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
   try {
     let refreshToken: string | undefined;
@@ -107,25 +126,24 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     }
 
     if (!refreshToken) {
-      return res.json({
-        status: 'error',
-        message: 'Missing refreshToken',
-      });
+      console.log('[NO TOKEN → FORCE NEW LOGIN]');
+
+      // 🔥 kalau kosong, ulang login
+      return res.redirect(307, '/player/growid/login/validate');
     }
 
-    // 🔥 DECODE TOKEN
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
 
     console.log('[CHECKTOKEN]', decoded);
 
-    // 🔥 RE-ENCODE TANPA UBAH
+    // 🔥 re-encode tanpa ubah isi
     const token = Buffer.from(decoded).toString('base64');
 
     res.send(JSON.stringify({
       status: 'success',
       message: 'Account Validated.',
       token,
-      url: '', // penting: kosong biar gak redirect
+      url: '', // penting
       accountType: 'growtopia',
       accountAge: 999,
     }));
@@ -137,6 +155,7 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     });
   }
 });
+
 
 // ================= START SERVER =================
 app.listen(PORT, () => {
