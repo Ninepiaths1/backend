@@ -13,7 +13,7 @@ app.disable('x-powered-by');
 // ================= MIDDLEWARE =================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(cors());
 
 const limiter = rateLimit({
   windowMs: 60_000,
@@ -62,61 +62,52 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
   res.send(htmlContent);
 });
 
-// ================= LOGIN VALIDATE (FIXED) =================
+// ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
-    // Set header secara manual untuk memastikan iOS tidak bingung
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-
     const { _token, growId, password, email } = req.body;
 
-    // 1. Handling Register Mode (Jika growId/password kosong)
+    // ================= REGISTER BUTTON (EMPTY) =================
+    // kalau kosong → tetap kirim token kosong biar C++ handle register
     if (!growId && !password) {
       const raw = `_token=${_token || ''}&growId=&password=`;
-      const token = Buffer.from(raw, 'utf8').toString('base64');
+      const token = Buffer.from(raw).toString('base64');
 
-      return res.status(200).json({
-        status: "success",
-        message: "Register Mode",
-        token: token,
-        url: "",
-        accountType: "growtopia"
-      });
+      return res.send(JSON.stringify({
+        status: 'success',
+        message: 'Register Mode',
+        token,
+        url: '',
+        accountType: 'growtopia',
+      }));
     }
 
-    // 2. Validasi input
+    // ================= VALIDASI LOGIN =================
     if (!growId || !password) {
-      return res.status(200).json({
-        status: "error",
-        message: "GrowID and password are required!"
+      return res.json({
+        status: 'error',
+        message: 'growId and password required',
       });
     }
 
-    // 3. Normal Login Logic
-    // Penting: Pastikan urutan parameter sesuai dengan yang diminta C++ Client
+    // ================= NORMAL LOGIN =================
     let raw = `_token=${_token}&growId=${growId}&password=${password}`;
     if (email) raw += `&email=${email}`;
 
-    const token = Buffer.from(raw, 'utf8').toString('base64');
+    const token = Buffer.from(raw).toString('base64');
 
-    // Menggunakan res.send(JSON.stringify) kadang lebih aman di beberapa framework 
-    // agar tidak ada spasi/newline tambahan yang merusak parsing di iOS
-    const responsePayload = {
-      status: "success",
-      message: "Account Validated.",
-      token: token,
-      url: "",
-      accountType: "growtopia"
-    };
-
-    return res.status(200).send(JSON.stringify(responsePayload));
-
+    res.send(JSON.stringify({
+      status: 'success',
+      message: 'Account Validated.',
+      token,
+      url: '',
+      accountType: 'growtopia',
+    }));
   } catch (error) {
-    console.error(`[ERROR]: ${error}`);
-    return res.status(200).json({
-      status: "error",
-      message: "Server encountered an error."
+    console.log(`[ERROR]: ${error}`);
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal Server Error',
     });
   }
 });
