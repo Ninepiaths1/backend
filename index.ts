@@ -67,48 +67,43 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
   try {
     const { _token, growId, password, email } = req.body;
 
-    // ================= REGISTER BUTTON (EMPTY) =================
-    // kalau kosong → tetap kirim token kosong biar C++ handle register
     if (!growId && !password) {
       const raw = `_token=${_token || ''}&growId=&password=`;
       const token = Buffer.from(raw).toString('base64');
 
-      return res.send(JSON.stringify({
+      // Gunakan res.json untuk memastikan Content-Type: application/json
+      return res.json({
         status: 'success',
         message: 'Register Mode',
         token,
         url: '',
         accountType: 'growtopia',
-      }));
+      });
     }
 
-    // ================= VALIDASI LOGIN =================
     if (!growId || !password) {
-      return res.json({
+      return res.status(400).json({
         status: 'error',
         message: 'growId and password required',
       });
     }
 
-    // ================= NORMAL LOGIN =================
     let raw = `_token=${_token}&growId=${growId}&password=${password}`;
     if (email) raw += `&email=${email}`;
 
     const token = Buffer.from(raw).toString('base64');
 
-    res.send(JSON.stringify({
+    // Pastikan tidak ada karakter aneh di akhir response
+    return res.json({
       status: 'success',
       message: 'Account Validated.',
       token,
       url: '',
       accountType: 'growtopia',
-    }));
+    });
   } catch (error) {
     console.log(`[ERROR]: ${error}`);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal Server Error',
-    });
+    return res.status(500).json({ status: 'error', message: 'Server Error' });
   }
 });
 
