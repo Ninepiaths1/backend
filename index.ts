@@ -187,8 +187,6 @@ sendResponse(req, res, {
   }
 });
 
-});
-
 // ================= START =================
 app.listen(PORT, () => {
   console.log(`[SERVER] Running on http://localhost:${PORT}`);
