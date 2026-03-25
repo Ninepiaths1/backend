@@ -62,48 +62,62 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
   res.send(htmlContent);
 });
 
-// ================= LOGIN VALIDATE =================
+// ================= LOGIN VALIDATE (FIXED) =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
+    // Set header secara manual untuk memastikan iOS tidak bingung
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+
     const { _token, growId, password, email } = req.body;
 
+    // 1. Handling Register Mode (Jika growId/password kosong)
     if (!growId && !password) {
       const raw = `_token=${_token || ''}&growId=&password=`;
-      const token = Buffer.from(raw).toString('base64');
+      const token = Buffer.from(raw, 'utf8').toString('base64');
 
-      // Gunakan res.json untuk memastikan Content-Type: application/json
-      return res.json({
-        status: 'success',
-        message: 'Register Mode',
-        token,
-        url: '',
-        accountType: 'growtopia',
+      return res.status(200).json({
+        status: "success",
+        message: "Register Mode",
+        token: token,
+        url: "",
+        accountType: "growtopia"
       });
     }
 
+    // 2. Validasi input
     if (!growId || !password) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'growId and password required',
+      return res.status(200).json({
+        status: "error",
+        message: "GrowID and password are required!"
       });
     }
 
+    // 3. Normal Login Logic
+    // Penting: Pastikan urutan parameter sesuai dengan yang diminta C++ Client
     let raw = `_token=${_token}&growId=${growId}&password=${password}`;
     if (email) raw += `&email=${email}`;
 
-    const token = Buffer.from(raw).toString('base64');
+    const token = Buffer.from(raw, 'utf8').toString('base64');
 
-    // Pastikan tidak ada karakter aneh di akhir response
-    return res.json({
-      status: 'success',
-      message: 'Account Validated.',
-      token,
-      url: '',
-      accountType: 'growtopia',
-    });
+    // Menggunakan res.send(JSON.stringify) kadang lebih aman di beberapa framework 
+    // agar tidak ada spasi/newline tambahan yang merusak parsing di iOS
+    const responsePayload = {
+      status: "success",
+      message: "Account Validated.",
+      token: token,
+      url: "",
+      accountType: "growtopia"
+    };
+
+    return res.status(200).send(JSON.stringify(responsePayload));
+
   } catch (error) {
-    console.log(`[ERROR]: ${error}`);
-    return res.status(500).json({ status: 'error', message: 'Server Error' });
+    console.error(`[ERROR]: ${error}`);
+    return res.status(200).json({
+      status: "error",
+      message: "Server encountered an error."
+    });
   }
 });
 
