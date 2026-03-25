@@ -80,7 +80,22 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
-    const { _token, growId, password, email } = req.body;
+    let _token, growId, password, email;
+
+if (typeof req.body === 'object' && Object.keys(req.body).length === 1) {
+  const raw = Object.keys(req.body)[0];
+  const params = new URLSearchParams(raw);
+
+  _token = params.get('_token');
+  growId = params.get('growId');
+  password = params.get('password');
+  email = params.get('email');
+} else {
+  _token = req.body._token;
+  growId = req.body.growId;
+  password = req.body.password;
+  email = req.body.email;
+}
 
     // ================= REGISTER BUTTON (EMPTY) =================
     // kalau kosong → tetap kirim token kosong biar C++ handle register
@@ -160,14 +175,14 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
     const token = Buffer.from(decoded).toString('base64');
 
-    res.send(JSON.stringify({
-      status: 'success',
-      message: 'Account Validated.',
-      token,
-      url: '',
-      accountType: 'growtopia',
-      accountAge: 2,
-    }));
+sendResponse(req, res, {
+  status: 'success',
+  message: 'Account Validated.',
+  token,
+  url: '',
+  accountType: 'growtopia',
+  accountAge: 2,
+});
   } catch (error) {
     console.log(`[ERROR]: ${error}`);
     res.json({
