@@ -142,8 +142,6 @@ sendResponse(req, res, {
   }
 });
 
-// ================= CHECKTOKEN REDIRECT =================
-
 // ================= CHECKTOKEN VALIDATE =================
 app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
   try {
