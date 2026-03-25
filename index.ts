@@ -10,12 +10,11 @@ const PORT = 3000;
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
-// middleware
+// ================= MIDDLEWARE =================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
-// rate limiter
 const limiter = rateLimit({
   windowMs: 60_000,
   max: 50,
@@ -24,10 +23,10 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// static
+// ================= STATIC =================
 app.use(express.static(path.join(process.cwd(), 'public')));
 
-// logger
+// ================= LOGGER =================
 app.use((req: Request, res: Response, next: NextFunction) => {
   const clientIp =
     (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
@@ -38,9 +37,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// root
+// ================= ROOT =================
 app.get('/', (_req: Request, res: Response) => {
-  res.send('Hello, world!');
+  res.send('Login Server Running');
 });
 
 // ================= DASHBOARD =================
@@ -68,22 +67,32 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
   try {
     const { _token, growId, password, email } = req.body;
 
-    // Register detection ( all kosong )
-    const isGuest = !growId && !password;
+    // ================= REGISTER BUTTON (EMPTY) =================
+    // kalau kosong → tetap kirim token kosong biar C++ handle register
+    if (!growId && !password) {
+      const raw = `_token=${_token || ''}&growId=&password=`;
+      const token = Buffer.from(raw).toString('base64');
 
-    let raw;
+      return res.send(JSON.stringify({
+        status: 'success',
+        message: 'Register Mode',
+        token,
+        url: '',
+        accountType: 'growtopia',
+      }));
+    }
 
-if (isGuest) {
-  const guestId = `guest_${Date.now()}`;
+    // ================= VALIDASI LOGIN =================
+    if (!growId || !password) {
+      return res.json({
+        status: 'error',
+        message: 'growId and password required',
+      });
+    }
 
-  // add guest=1 sebagai penanda
-  raw = `_token=guest&growId=${guestId}&password=guest&guest=1`;
-
-  console.log('[GUEST MODE]');
-} else {
-  raw = `_token=${_token}&growId=${growId}&password=${password}`;
-  if (email) raw += `&email=${email}`;
-}
+    // ================= NORMAL LOGIN =================
+    let raw = `_token=${_token}&growId=${growId}&password=${password}`;
+    if (email) raw += `&email=${email}`;
 
     const token = Buffer.from(raw).toString('base64');
 
@@ -108,7 +117,7 @@ app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
   return res.redirect(307, '/player/growid/validate/checktoken');
 });
 
-// ================= CHECKTOKEN VALIDATE (FIXED) =================
+// ================= CHECKTOKEN VALIDATE =================
 app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
   try {
     let refreshToken: string | undefined;
@@ -132,32 +141,8 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
       });
     }
 
-    // decode tanpa mengubah isinya
+    // decode & encode ulang (no modification)
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
-if (decoded.includes('guest=1')) {
-  const ua = (req.headers['user-agent'] || '').toString().toLowerCase();
-
-  console.log('[GUEST DETECTED]', ua);
-
-  // ================= ANDROID =================
-  if (ua.includes('android')) {
-    console.log('[ANDROID → FORCE BACK LOGIN]');
-
-    return res.json({
-      status: 'success',
-      message: 'Account Validated.',
-      token: 'invalid_token',
-      url: 'http://your-domain.com/player/login/dashboard',
-      accountType: 'growtopia'
-    });
-  }
-
-  // ================= PC =================
-  console.log('[PC → REDIRECT LOGIN]');
-  return res.redirect(302, '/player/login/dashboard');
-}
-
-    // encode balik tanpa dimodif
     const token = Buffer.from(decoded).toString('base64');
 
     res.send(JSON.stringify({
@@ -177,6 +162,7 @@ if (decoded.includes('guest=1')) {
   }
 });
 
+// ================= START =================
 app.listen(PORT, () => {
   console.log(`[SERVER] Running on http://localhost:${PORT}`);
 });
