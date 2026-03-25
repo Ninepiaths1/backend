@@ -13,35 +13,26 @@ app.disable('x-powered-by');
 // ================= MIDDLEWARE =================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.text({ type: '*/*' })); // Penting untuk menangkap raw data dari iOS
 app.use(cors());
 
 const limiter = rateLimit({
   windowMs: 60_000,
-  max: 100, // Dinaikkan sedikit agar tidak kena limit saat spam login
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use(limiter);
 
-// Helper untuk parsing body yang berantakan dari client iOS/Android
-const parseBody = (body: any) => {
-  if (typeof body === 'object' && Object.keys(body).length > 0) {
-    const firstKey = Object.keys(body)[0];
-    if (firstKey.includes('growId=') || firstKey.includes('refreshToken=')) {
-      return Object.fromEntries(new URLSearchParams(firstKey));
-    }
-    return body;
-  }
-  if (typeof body === 'string') {
-    return Object.fromEntries(new URLSearchParams(body));
-  }
-  return {};
-};
+// ================= STATIC =================
+app.use(express.static(path.join(process.cwd(), 'public')));
 
 // ================= LOGGER =================
 app.use((req: Request, res: Response, next: NextFunction) => {
-  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+  const clientIp =
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+    req.socket.remoteAddress ||
+    'unknown';
+
   console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
   next();
 });
@@ -53,65 +44,76 @@ app.get('/', (_req: Request, res: Response) => {
 
 // ================= DASHBOARD =================
 app.all('/player/login/dashboard', async (req: Request, res: Response) => {
-  const data = typeof req.body === 'object' ? JSON.stringify(req.body) : req.body;
-  const encodedClientData = Buffer.from(data || '').toString('base64');
+  const body = req.body;
+  let clientData = '';
 
-  try {
-    const templatePath = path.join(process.cwd(), 'template', 'dashboard.html');
-    let htmlContent = fs.readFileSync(templatePath, 'utf-8');
-    htmlContent = htmlContent.replace('{{ data }}', encodedClientData);
-    res.setHeader('Content-Type', 'text/html');
-    res.send(htmlContent);
-  } catch (err) {
-    res.status(500).send("Dashboard template missing.");
+  if (body && typeof body === 'object' && Object.keys(body).length > 0) {
+    clientData = Object.keys(body)[0];
   }
+
+  const encodedClientData = Buffer.from(clientData).toString('base64');
+
+  const templatePath = path.join(process.cwd(), 'template', 'dashboard.html');
+  const templateContent = fs.readFileSync(templatePath, 'utf-8');
+
+  const htmlContent = templateContent.replace('{{ data }}', encodedClientData);
+
+  res.setHeader('Content-Type', 'text/html');
+  res.send(htmlContent);
 });
 
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
-    const data = parseBody(req.body);
-    const { _token, growId, password, email } = data;
+    const { _token, growId, password, email } = req.body;
 
-    // Mode Register (Jika growId/password kosong)
+    // ================= REGISTER BUTTON (EMPTY) =================
+    // kalau kosong → tetap kirim token kosong biar C++ handle register
     if (!growId && !password) {
       const raw = `_token=${_token || ''}&growId=&password=`;
       const token = Buffer.from(raw).toString('base64');
 
+
       return res.json({
-        status: 'success',
-        message: 'Register Mode',
-        token,
-        url: '',
-        accountType: 'growtopia',
-      });
+  status: 'success',
+  message: 'Account Validated.',
+  token,
+  url: '',
+  accountType: 'growtopia',
+});
     }
 
-    // Validasi Login normal
+
+    // ================= VALIDASI LOGIN =================
     if (!growId || !password) {
-      return res.status(400).json({
+      return res.json({
         status: 'error',
-        message: 'GrowID and password required',
+        message: 'growId and password required',
       });
     }
 
-    let raw = `_token=${_token || ''}&growId=${growId}&password=${password}`;
+    // ================= NORMAL LOGIN =================
+    let raw = `_token=${_token}&growId=${growId}&password=${password}`;
     if (email) raw += `&email=${email}`;
 
     const token = Buffer.from(raw).toString('base64');
 
-    // MENGGUNAKAN res.json() agar iOS tidak bingung dengan tipe data
-    return res.json({
-      status: 'success',
-      message: 'Account Validated.',
-      token,
-      url: '',
-      accountType: 'growtopia',
-    });
+    
+res.json({
+  status: 'success',
+  message: 'Account Validated.',
+  token,
+  url: '',
+  accountType: 'growtopia',
+});
+
 
   } catch (error) {
-    console.error(`[ERROR]: ${error}`);
-    res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    console.log(`[ERROR]: ${error}`);
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal Server Error',
+    });
   }
 });
 
@@ -123,8 +125,19 @@ app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
 // ================= CHECKTOKEN VALIDATE =================
 app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
   try {
-    const data = parseBody(req.body);
-    const refreshToken = data.refreshToken;
+    let refreshToken: string | undefined;
+
+    if (typeof req.body === 'object' && req.body !== null) {
+      const formData = req.body as Record<string, string>;
+
+      if ('refreshToken' in formData) {
+        refreshToken = formData.refreshToken;
+      } else if (Object.keys(formData).length === 1) {
+        const rawPayload = Object.keys(formData)[0];
+        const params = new URLSearchParams(rawPayload);
+        refreshToken = params.get('refreshToken') || undefined;
+      }
+    }
 
     if (!refreshToken) {
       return res.json({
@@ -133,21 +146,27 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
       });
     }
 
-    // Decode & Encode ulang untuk memastikan validitas
+    // decode & encode ulang (no modification)
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
     const token = Buffer.from(decoded).toString('base64');
 
-    return res.json({
+    
+    res.send(JSON.stringify({
       status: 'success',
       message: 'Account Validated.',
       token,
       url: '',
       accountType: 'growtopia',
       accountAge: 2,
-    });
+    }));
+
+    
   } catch (error) {
-    console.error(`[ERROR]: ${error}`);
-    res.json({ status: 'error', message: 'Internal Server Error' });
+    console.log(`[ERROR]: ${error}`);
+    res.json({
+      status: 'error',
+      message: 'Internal Server Error',
+    });
   }
 });
 
