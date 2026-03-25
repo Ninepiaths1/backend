@@ -143,9 +143,6 @@ sendResponse(req, res, {
 });
 
 // ================= CHECKTOKEN REDIRECT =================
-app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
-  return res.redirect(307, '/player/growid/validate/checktoken');
-});
 
 // ================= CHECKTOKEN VALIDATE =================
 app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
