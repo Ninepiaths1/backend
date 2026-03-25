@@ -13,7 +13,7 @@ app.disable('x-powered-by');
 // ================= MIDDLEWARE =================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+app.use(express.json());
 
 const limiter = rateLimit({
   windowMs: 60_000,
