@@ -141,10 +141,10 @@ sendResponse(req, res, {
     });
   }
 });
-
-// ================= CHECKTOKEN VALIDATE =================
-app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
-  try {
+// ================= CHECKTOKEN REDIRECT =================
+app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
+  return res.redirect(307, '/player/growid/validate/checktoken');
+    try {
     let refreshToken: string | undefined;
 
     if (typeof req.body === 'object' && req.body !== null) {
@@ -185,6 +185,8 @@ sendResponse(req, res, {
       message: 'Internal Server Error',
     });
   }
+});
+
 });
 
 // ================= START =================
