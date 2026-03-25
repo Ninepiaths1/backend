@@ -6,6 +6,21 @@ import fs from 'fs';
 
 const app = express();
 const PORT = 3000;
+// sendResponse
+function sendResponse(req: Request, res: Response, data: any) {
+  const userAgent = req.headers['user-agent'] || '';
+
+  const isIOS = /iphone|ipad|ios/i.test(userAgent);
+
+  if (isIOS) {
+    // iOS butuh JSON proper
+    res.setHeader('Content-Type', 'application/json');
+    return res.json(data);
+  } else {
+    // Windows / Android pakai raw string
+    return res.send(JSON.stringify(data));
+  }
+}
 
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
@@ -73,13 +88,13 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
       const raw = `_token=${_token || ''}&growId=&password=`;
       const token = Buffer.from(raw).toString('base64');
 
-      return res.send(JSON.stringify({
-        status: 'success',
-        message: 'Register Mode',
-        token,
-        url: '',
-        accountType: 'growtopia',
-      }));
+      return sendResponse(req, res, {
+  status: 'success',
+  message: 'Account Validated.',
+  token,
+  url: '',
+  accountType: 'growtopia',
+});
     }
 
     // ================= VALIDASI LOGIN =================
@@ -96,13 +111,13 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
 
     const token = Buffer.from(raw).toString('base64');
 
-    res.send(JSON.stringify({
-      status: 'success',
-      message: 'Account Validated.',
-      token,
-      url: '',
-      accountType: 'growtopia',
-    }));
+sendResponse(req, res, {
+  status: 'success',
+  message: 'Account Validated.',
+  token,
+  url: '',
+  accountType: 'growtopia',
+});
   } catch (error) {
     console.log(`[ERROR]: ${error}`);
     res.status(500).json({
@@ -145,14 +160,13 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
     const token = Buffer.from(decoded).toString('base64');
 
-    res.send(JSON.stringify({
-      status: 'success',
-      message: 'Account Validated.',
-      token,
-      url: '',
-      accountType: 'growtopia',
-      accountAge: 2,
-    }));
+sendResponse(req, res, {
+  status: 'success',
+  message: 'Account Validated.',
+  token,
+  url: '',
+  accountType: 'growtopia',
+});
   } catch (error) {
     console.log(`[ERROR]: ${error}`);
     res.json({
