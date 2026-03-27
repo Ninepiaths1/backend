@@ -10,8 +10,13 @@ const PORT = process.env.PORT || 3000;
 // ================= HELPER: KIRIM RESPONSE =================
 // Dibuat seragam untuk semua OS agar parser C++ game tidak bingung
 function sendResponse(res: Response, data: any) {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  return res.status(200).send(JSON.stringify(data));
+  // Paksa header tanpa embel-embel charset jika game malah nge-print
+  res.setHeader('Content-Type', 'application/json'); 
+  
+  // Gunakan JSON.stringify tanpa spasi (compact)
+  const payload = JSON.stringify(data);
+  
+  return res.status(200).send(payload);
 }
 
 // ================= MIDDLEWARE =================
@@ -78,41 +83,26 @@ app.all('/player/login/dashboard', (req: Request, res: Response) => {
 // VALIDATE LOGIN
 app.all('/player/growid/login/validate', (req: Request, res: Response) => {
   try {
-    const { _token, growId, password, email } = req.body;
+    const { _token, growId, password } = req.body;
 
-    // Jika Register (GrowId & Pass Kosong)
-    if (!growId && !password) {
-      const raw = `_token=${_token || ''}&growId=&password=`;
-      return sendResponse(res, {
-        status: 'success',
-        message: 'Account Validated.',
-        token: Buffer.from(raw).toString('base64'),
-        url: '',
-        accountType: 'growtopia',
-      });
-    }
+    const raw = `_token=${_token || ''}&growId=${growId || ''}&password=${password || ''}`;
+    const token = Buffer.from(raw).toString('base64');
 
-    if (!growId || !password) {
-      return sendResponse(res, {
-        status: 'error',
-        message: 'GrowID and password are required!',
-      });
-    }
+    // Buat object response yang sangat standar
+    const result = {
+      status: "success",
+      message: "Account Validated.",
+      token: token,
+      url: "",
+      accountType: "growtopia"
+    };
 
-    // Normal Login
-    let raw = `_token=${_token}&growId=${growId}&password=${password}`;
-    if (email) raw += `&email=${email}`;
-
-    return sendResponse(res, {
-      status: 'success',
-      message: 'Account Validated.',
-      token: Buffer.from(raw).toString('base64'),
-      url: '',
-      accountType: 'growtopia',
-    });
+    // SET HEADER MANUAL & SEND RAW STRING
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(200).send(JSON.stringify(result));
+    
   } catch (error) {
-    console.error(error);
-    return sendResponse(res, { status: 'error', message: 'Server Error' });
+    return res.status(200).send(JSON.stringify({ status: "error", message: "server_err" }));
   }
 });
 
