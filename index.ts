@@ -16,15 +16,10 @@ function sendResponse(req: Request, res: Response, data: any) {
     // iOS butuh JSON proper
     res.setHeader('Content-Type', 'application/json');
     return res.json(data);
-  } else
-  let response = '';
-  for (const key in data) {
-    response += `${key}|${data[key]}\n`;
+  } else {
+    // Windows / Android pakai raw string
+    return res.send(JSON.stringify(data));
   }
-
-  res.setHeader('Content-Type', 'text/plain');
-  return res.send(response);
-}
 }
 
 app.set('trust proxy', 1);
