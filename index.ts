@@ -33,8 +33,8 @@ app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
 // ================= MIDDLEWARE =================
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cors());
 
 const limiter = rateLimit({
