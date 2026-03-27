@@ -9,23 +9,16 @@ const PORT = 3000;
 // sendResponse
 function sendResponse(req: Request, res: Response, data: any) {
   const userAgent = req.headers['user-agent'] || '';
+
   const isIOS = /iphone|ipad|ios/i.test(userAgent);
 
-  // Menghapus spasi agar JSON benar-benar padat (minified)
-  const jsonString = JSON.stringify(data);
-
   if (isIOS) {
-    // iOS butuh JSON proper dengan header yang benar
+    // iOS butuh JSON proper
     res.setHeader('Content-Type', 'application/json');
-    return res.status(200).send(jsonString);
+    return res.json(data);
   } else {
-    // FIX UNTUK ANDROID: 
-    // Pastikan Content-Type TETAP application/json tetapi dikirim sebagai string mentah.
-    // Beberapa Android lama/baru menolak jika Content-Type adalah text/html atau default.
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    
-    // Gunakan res.end atau res.send tanpa formatting tambahan
-    return res.status(200).send(jsonString);
+    // Windows / Android pakai raw string
+    return res.send(JSON.stringify(data));
   }
 }
 
