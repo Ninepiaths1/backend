@@ -9,20 +9,17 @@ const PORT = 3000;
 // sendResponse
 function sendResponse(req: Request, res: Response, data: any) {
   const userAgent = req.headers['user-agent'] || '';
+
   const isIOS = /iphone|ipad|ios/i.test(userAgent);
 
   if (isIOS) {
+    // iOS butuh JSON proper
+    res.setHeader('Content-Type', 'application/json');
     return res.json(data);
+  } else {
+    // Windows / Android pakai raw string
+    return res.send(JSON.stringify(data));
   }
-
-  // android & windows
-  let response = '';
-  for (const key in data) {
-    response += `${key}|${data[key]}\n`;
-  }
-
-  res.setHeader('Content-Type', 'text/plain');
-  return res.send(response);
 }
 
 app.set('trust proxy', 1);
