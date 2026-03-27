@@ -9,17 +9,20 @@ const PORT = 3000;
 // sendResponse
 function sendResponse(req: Request, res: Response, data: any) {
   const userAgent = req.headers['user-agent'] || '';
-
   const isIOS = /iphone|ipad|ios/i.test(userAgent);
 
   if (isIOS) {
-    // iOS butuh JSON proper
-    res.setHeader('Content-Type', 'application/json');
     return res.json(data);
-  } else {
-    // Windows / Android pakai raw string
-    return res.send(JSON.stringify(data));
   }
+
+  // android & windows
+  let response = '';
+  for (const key in data) {
+    response += `${key}|${data[key]}\n`;
+  }
+
+  res.setHeader('Content-Type', 'text/plain');
+  return res.send(response);
 }
 
 app.set('trust proxy', 1);
@@ -58,7 +61,24 @@ app.get('/', (_req: Request, res: Response) => {
 });
 
 // ================= DASHBOARD =================
+app.all('/player/login/dashboard', async (req: Request, res: Response) => {
+  const body = req.body;
+  let clientData = '';
 
+  if (body && typeof body === 'object' && Object.keys(body).length > 0) {
+    clientData = Object.keys(body)[0];
+  }
+
+  const encodedClientData = Buffer.from(clientData).toString('base64');
+
+  const templatePath = path.join(process.cwd(), 'template', 'dashboard.html');
+  const templateContent = fs.readFileSync(templatePath, 'utf-8');
+
+  const htmlContent = templateContent.replace('{{ data }}', encodedClientData);
+
+  res.setHeader('Content-Type', 'text/html');
+  res.send(htmlContent);
+});
 
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
