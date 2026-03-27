@@ -49,6 +49,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     'unknown';
 
   console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
+  console.log('[UA]', req.headers['user-agent']);
   next();
 });
 
