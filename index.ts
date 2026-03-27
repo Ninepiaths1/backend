@@ -29,11 +29,7 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cors());
-//debug
-app.use((req: Request, res: Response, next: NextFunction) => {
-  console.log('[HIT]', req.method, req.path);
-  next();
-});
+
 const limiter = rateLimit({
   windowMs: 60_000,
   max: 50,
