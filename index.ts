@@ -193,6 +193,8 @@ sendResponse(req, res, {
 });
 
 // ================= START =================
-import serverless from 'serverless-http';
+app.listen(PORT, () => {
+  console.log(`[SERVER] Running on http://localhost:${PORT}`);
+});
 
-export default serverless(app);
+export default app;
