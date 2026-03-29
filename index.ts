@@ -26,8 +26,8 @@ app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
 // ================= MIDDLEWARE =================
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 const limiter = rateLimit({
@@ -49,7 +49,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     'unknown';
 
   console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
-  console.log('[UA]', req.headers['user-agent']);
   next();
 });
 
