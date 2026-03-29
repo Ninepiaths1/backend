@@ -109,6 +109,7 @@ if (typeof req.body === 'object' && Object.keys(req.body).length === 1) {
   token,
   url: '',
   accountType: 'growtopia',
+  accountAge: 0
 });
     }
 
