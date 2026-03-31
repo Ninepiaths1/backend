@@ -6,202 +6,195 @@ import fs from 'fs';
 
 const app = express();
 const PORT = 3000;
-
-/**
- * HELPER: sendResponse
- * SANGAT PENTING: Menghindari Ercon di iOS vs Windows.
- * Client Windows/Android butuh raw string, iOS butuh Application/Json.
- */
+// sendResponse
 function sendResponse(req: Request, res: Response, data: any) {
   const userAgent = req.headers['user-agent'] || '';
+
   const isIOS = /iphone|ipad|ios/i.test(userAgent);
 
   if (isIOS) {
+    // iOS butuh JSON proper
     res.setHeader('Content-Type', 'application/json');
     return res.json(data);
   } else {
-    // Windows/Android: Jangan kirim header application/json jika masih ercon
-    // Gunakan text/html atau raw stringified
-    res.setHeader('Content-Type', 'text/html'); 
+    // Windows / Android pakai raw string
     return res.send(JSON.stringify(data));
   }
 }
 
-// ================= CONFIG & MIDDLEWARE =================
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
-// Gunakan limit yang lebih tinggi untuk debugging agar tidak terkena Rate Limit sendiri
+// ================= MIDDLEWARE =================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 const limiter = rateLimit({
   windowMs: 60_000,
-  max: 100, 
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use(limiter);
 
+// ================= STATIC =================
 app.use(express.static(path.join(process.cwd(), 'public')));
 
-// Logger
+// ================= LOGGER =================
 app.use((req: Request, res: Response, next: NextFunction) => {
-  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
-  console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.path} ← ${clientIp}`);
+  const clientIp =
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+    req.socket.remoteAddress ||
+    'unknown';
+
+  console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
   next();
 });
 
-// ================= ROUTES =================
-
+// ================= ROOT =================
 app.get('/', (_req: Request, res: Response) => {
-  res.send('Login Server Active');
+  res.send('Login Server Running');
 });
 
-/**
- * DASHBOARD SINKRONISASI
- * Memastikan data loginurl dari C++ ter-parse dengan benar
- */
+// ================= DASHBOARD =================
 app.all('/player/login/dashboard', async (req: Request, res: Response) => {
+  const body = req.body;
   let clientData = '';
-  // Di GTPS, data sering dikirim sebagai key pertama dalam x-www-form-urlencoded
-  if (req.body && typeof req.body === 'object') {
-    clientData = Object.keys(req.body)[0] || '';
+
+  if (body && typeof body === 'object' && Object.keys(body).length > 0) {
+    clientData = Object.keys(body)[0];
   }
 
   const encodedClientData = Buffer.from(clientData).toString('base64');
-  const templatePath = path.join(process.cwd(), 'template', 'dashboard.html');
 
-  if (fs.existsSync(templatePath)) {
-    const templateContent = fs.readFileSync(templatePath, 'utf-8');
-    const htmlContent = templateContent.replace('{{ data }}', encodedClientData);
-    res.send(htmlContent);
-  } else {
-    res.status(404).send('Dashboard Missing');
-  }
+  const templatePath = path.join(process.cwd(), 'template', 'dashboard.html');
+  const templateContent = fs.readFileSync(templatePath, 'utf-8');
+
+  const htmlContent = templateContent.replace('{{ data }}', encodedClientData);
+
+  res.setHeader('Content-Type', 'text/html');
+  res.send(htmlContent);
 });
 
-/**
- * LOGIN VALIDATE SINKRONISASI
- * Menangani login dari dashboard ke Backend C++
- */
+// ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
-    let _token = '', growId = '', password = '', email = '';
+    let _token, growId, password, email;
 
-    // Handling data mentah dari game client (Raw string parsing)
-    if (typeof req.body === 'object' && Object.keys(req.body).length === 1) {
-      const params = new URLSearchParams(Object.keys(req.body)[0]);
-      _token = params.get('_token') || '';
-      growId = params.get('growId') || '';
-      password = params.get('password') || '';
-      email = params.get('email') || '';
-    } else {
-      _token = req.body._token || '';
-      growId = req.body.growId || '';
-      password = req.body.password || '';
-      email = req.body.email || '';
+if (typeof req.body === 'object' && Object.keys(req.body).length === 1) {
+  const raw = Object.keys(req.body)[0];
+  const params = new URLSearchParams(raw);
+
+  _token = params.get('_token');
+  growId = params.get('growId');
+  password = params.get('password');
+  email = params.get('email');
+} else {
+  _token = req.body._token;
+  growId = req.body.growId;
+  password = req.body.password;
+  email = req.body.email;
+}
+
+    // ================= REGISTER BUTTON (EMPTY) =================
+    // kalau kosong → tetap kirim token kosong biar C++ handle register
+    if (!growId && !password) {
+      const raw = `_token=${_token || ''}&growId=&password=`;
+      const token = Buffer.from(raw).toString('base64');
+
+      return sendResponse(req, res, {
+  status: 'success',
+  message: 'Account Validated.',
+  token,
+  url: '',
+  accountType: 'growtopia',
+});
     }
 
-    // Flag reg: 1 untuk register (ada email), 0 untuk login biasa
-    const regFlag = email ? '1' : '0';
-    let rawPayload = `_token=${_token}&growId=${growId}&password=${password}`;
-    if (email) rawPayload += `&email=${email}`;
-    rawPayload += `&reg=${regFlag}`;
+    // ================= VALIDASI LOGIN =================
+    if (!growId || !password) {
+      return res.json({
+        status: 'error',
+        message: 'growId and password required',
+      });
+    }
 
-    const token = Buffer.from(rawPayload).toString('base64');
+    // ================= NORMAL LOGIN =================
+    let raw = `_token=${_token}&growId=${growId}&password=${password}`;
+    if (email) raw += `&email=${email}`;
 
-    return sendResponse(req, res, {
-      status: 'success',
-      message: 'Account Validated.',
-      token: token,
-      url: '',
-      accountType: 'growtopia',
-    });
+    const token = Buffer.from(raw).toString('base64');
+
+sendResponse(req, res, {
+  status: 'success',
+  message: 'Account Validated.',
+  token,
+  url: '',
+  accountType: 'growtopia',
+});
   } catch (error) {
-    console.error(`[LOGIN ERROR]: ${error}`);
-    res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    console.log(`[ERROR]: ${error}`);
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal Server Error',
+    });
   }
 });
 
+// ================= CHECKTOKEN REDIRECT =================
 app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
   return res.redirect(307, '/player/growid/validate/checktoken');
 });
 
-/**
- * CHECKTOKEN SINKRONISASI
- * Sering menjadi penyebab Ercon jika payload refreshToken tidak bersih
- */
+// ================= CHECKTOKEN VALIDATE =================
 app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
   try {
-    let refreshToken = '';
-    let clientData = '';
+    let refreshToken: string | undefined;
 
-    // 1. Ambil dari body (standard)
-    if (req.body && typeof req.body === 'object') {
-      const bodyKeys = Object.keys(req.body);
-      if (bodyKeys.length === 1) {
-        const params = new URLSearchParams(bodyKeys[0]);
-        refreshToken = params.get('refreshToken') || '';
-        clientData = params.get('clientData') || '';
-      } else {
-        refreshToken = req.body.refreshToken || '';
-        clientData = req.body.clientData || '';
+    if (typeof req.body === 'object' && req.body !== null) {
+      const formData = req.body as Record<string, string>;
+
+      if ('refreshToken' in formData) {
+        refreshToken = formData.refreshToken;
+      } else if (Object.keys(formData).length === 1) {
+        const rawPayload = Object.keys(formData)[0];
+        const params = new URLSearchParams(rawPayload);
+        refreshToken = params.get('refreshToken') || undefined;
       }
     }
 
-    // 2. Fallback ke Raw Stream (Sangat penting jika middleware gagal baca body)
-    if (!refreshToken && req.readable) {
-      const rawBody = await new Promise<string>((resolve) => {
-        let p = '';
-        req.on('data', (c) => p += c.toString());
-        req.on('end', () => resolve(p));
-      });
-      const params = new URLSearchParams(rawBody);
-      refreshToken = params.get('refreshToken') || '';
-      clientData = params.get('clientData') || '';
-    }
-
     if (!refreshToken) {
-      return res.json({ status: 'error', message: 'Missing Token' });
+      return res.json({
+        status: 'error',
+        message: 'Missing refreshToken',
+      });
     }
 
-    // SINKRONISASI PAYLOAD:
-    // Hapus flag reg lama dan bersihkan spasi agar tidak korup di C++
-    let decoded = Buffer.from(refreshToken, 'base64').toString('utf-8').trim();
-    decoded = decoded.replace(/&reg=[01]/g, '');
+    // decode & encode ulang (no modification)
+    const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
+    const token = Buffer.from(decoded).toString('base64');
 
-    // Inject clientData baru ke _token (Standard GTPS security)
-    if (clientData) {
-      const b64Client = Buffer.from(clientData).toString('base64');
-      // Ganti _token lama dengan clientData baru hasil handshake
-      decoded = decoded.replace(/(_token=)[^&]*/, `$1${b64Client}`);
-    }
-
-    // Pastikan reg flag tetap konsisten di akhir (default login 0)
-    if (!decoded.includes('&reg=')) {
-      decoded += `&reg=0`;
-    }
-
-    const finalToken = Buffer.from(decoded).toString('base64');
-
-    return sendResponse(req, res, {
-      status: 'success',
-      message: 'Account Validated.',
-      token: finalToken,
-      url: '',
-      accountType: 'growtopia',
-      accountAge: 2,
-    });
+sendResponse(req, res, {
+  status: 'success',
+  message: 'Account Validated.',
+  token,
+  url: '',
+  accountType: 'growtopia',
+  accountAge: 2,
+});
   } catch (error) {
-    console.error(`[CHECKTOKEN ERROR]: ${error}`);
-    res.json({ status: 'error', message: 'Internal Server Error' });
+    console.log(`[ERROR]: ${error}`);
+    res.json({
+      status: 'error',
+      message: 'Internal Server Error',
+    });
   }
 });
 
+// ================= START =================
 app.listen(PORT, () => {
-  console.log(`[SERVER] NovaGT Login Server running on port ${PORT}`);
+  console.log(`[SERVER] Running on http://localhost:${PORT}`);
 });
 
 export default app;
