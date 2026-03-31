@@ -6,18 +6,26 @@ import fs from 'fs';
 
 const app = express();
 const PORT = 3000;
-// sendResponse
+
+/**
+ * FIX: RGT & Proxy seringkali gagal baca JSON jika ada header charset 
+ * atau format yang tidak sesuai ekspektasi client C++.
+ */
 function sendResponse(req: Request, res: Response, data: any) {
   const userAgent = req.headers['user-agent'] || '';
-
   const isIOS = /iphone|ipad|ios/i.test(userAgent);
 
+  // Set header dasar agar tidak diblokir proxy/vhost
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   if (isIOS) {
-    // iOS butuh JSON proper
     res.setHeader('Content-Type', 'application/json');
     return res.json(data);
   } else {
-    // Windows / Android pakai raw string
+    // FIX: RGT & Windows Client lebih stabil dengan text/html atau application/json tanpa charset
+    res.setHeader('Content-Type', 'application/json'); 
     return res.send(JSON.stringify(data));
   }
 }
@@ -26,13 +34,28 @@ app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
 // ================= MIDDLEWARE =================
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// FIX: Menambahkan limit body lebih besar jika rgt mengirim payload panjang
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cors());
+
+// Handle payload dari RGT yang terkadang dikirim sebagai 'text/plain' tapi isinya JSON/Query
+app.use((req, res, next) => {
+  if (req.headers['content-type'] === 'text/plain') {
+    let data = '';
+    req.on('data', chunk => { data += chunk; });
+    req.on('end', () => {
+      req.body = data;
+      next();
+    });
+  } else {
+    next();
+  }
+});
 
 const limiter = rateLimit({
   windowMs: 60_000,
-  max: 50,
+  max: 100, // Dinaikkan agar user tidak gampang terkena rate limit saat login-logout
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -48,102 +71,86 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     req.socket.remoteAddress ||
     'unknown';
 
-  console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
+  console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.path} ← ${clientIp}`);
   next();
 });
 
 // ================= ROOT =================
 app.get('/', (_req: Request, res: Response) => {
-  res.send('Login Server Running');
+  res.status(200).send('Login Server Online');
 });
 
 // ================= DASHBOARD =================
 app.all('/player/login/dashboard', async (req: Request, res: Response) => {
-  const body = req.body;
-  let clientData = '';
+  try {
+    let clientData = '';
+    // Handle berbagai jenis body input
+    if (typeof req.body === 'object') {
+      clientData = Object.keys(req.body)[0] || '';
+    } else if (typeof req.body === 'string') {
+      clientData = req.body;
+    }
 
-  if (body && typeof body === 'object' && Object.keys(body).length > 0) {
-    clientData = Object.keys(body)[0];
+    const encodedClientData = Buffer.from(clientData).toString('base64');
+    const templatePath = path.join(process.cwd(), 'template', 'dashboard.html');
+    
+    if (!fs.existsSync(templatePath)) return res.status(404).send('Template not found');
+    
+    const templateContent = fs.readFileSync(templatePath, 'utf-8');
+    const htmlContent = templateContent.replace('{{ data }}', encodedClientData);
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(htmlContent);
+  } catch (e) {
+    res.status(500).send('Dashboard Error');
   }
-
-  const encodedClientData = Buffer.from(clientData).toString('base64');
-
-  const templatePath = path.join(process.cwd(), 'template', 'dashboard.html');
-  const templateContent = fs.readFileSync(templatePath, 'utf-8');
-
-  const htmlContent = templateContent.replace('{{ data }}', encodedClientData);
-
-  res.setHeader('Content-Type', 'text/html');
-  res.send(htmlContent);
 });
 
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
-    let _token, growId, password, email;
+    let _token, growId, password;
 
-if (typeof req.body === 'object' && Object.keys(req.body).length === 1) {
-  const raw = Object.keys(req.body)[0];
-  const params = new URLSearchParams(raw);
+    // Parsing Body untuk RGT/Vhost yang sering kirim data mentah
+    const bodyData = typeof req.body === 'string' ? req.body : '';
+    const params = new URLSearchParams(bodyData || Object.keys(req.body)[0]);
 
-  _token = params.get('_token');
-  growId = params.get('growId');
-  password = params.get('password');
-  email = params.get('email');
-} else {
-  _token = req.body._token;
-  growId = req.body.growId;
-  password = req.body.password;
-  email = req.body.email;
-}
+    _token = params.get('_token') || req.body._token;
+    growId = params.get('growId') || req.body.growId;
+    password = params.get('password') || req.body.password;
 
-    // ================= REGISTER BUTTON (EMPTY) =================
-    // kalau kosong → tetap kirim token kosong biar C++ handle register
+    // Register Click (Kosong)
     if (!growId && !password) {
-      const raw = `_token=${_token || ''}&growId=&password=`;
-      const token = Buffer.from(raw).toString('base64');
-
+      const token = Buffer.from(`_token=${_token || ''}&growId=&password=`).toString('base64');
       return sendResponse(req, res, {
-  status: 'success',
-  message: 'Account Validated.',
-  token,
-  url: '',
-  accountType: 'growtopia',
-});
-    }
-
-    // ================= VALIDASI LOGIN =================
-    if (!growId || !password) {
-      return res.json({
-        status: 'error',
-        message: 'growId and password required',
+        status: 'success',
+        message: 'Account Validated.',
+        token,
+        url: '',
+        accountType: 'growtopia',
       });
     }
 
-    // ================= NORMAL LOGIN =================
-    let raw = `_token=${_token}&growId=${growId}&password=${password}`;
-    if (email) raw += `&email=${email}`;
-
+    // Normal Login
+    const raw = `_token=${_token || ''}&growId=${growId}&password=${password}`;
     const token = Buffer.from(raw).toString('base64');
 
-sendResponse(req, res, {
-  status: 'success',
-  message: 'Account Validated.',
-  token,
-  url: '',
-  accountType: 'growtopia',
-});
-  } catch (error) {
-    console.log(`[ERROR]: ${error}`);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal Server Error',
+    sendResponse(req, res, {
+      status: 'success',
+      message: 'Account Validated.',
+      token,
+      url: '',
+      accountType: 'growtopia',
     });
+  } catch (error) {
+    console.error(`[LOGIN ERROR]:`, error);
+    res.status(200).json({ status: 'error', message: 'System error' });
   }
 });
 
 // ================= CHECKTOKEN REDIRECT =================
-app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
+app.all('/player/growid/checktoken', (req: Request, res: Response) => {
+  // Gunakan 307 agar Method (POST) tetap terjaga saat redirect
   return res.redirect(307, '/player/growid/validate/checktoken');
 });
 
@@ -154,10 +161,9 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
 
     if (typeof req.body === 'object' && req.body !== null) {
       const formData = req.body as Record<string, string>;
-
       if ('refreshToken' in formData) {
         refreshToken = formData.refreshToken;
-      } else if (Object.keys(formData).length === 1) {
+      } else {
         const rawPayload = Object.keys(formData)[0];
         const params = new URLSearchParams(rawPayload);
         refreshToken = params.get('refreshToken') || undefined;
@@ -165,36 +171,28 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     }
 
     if (!refreshToken) {
-      return res.json({
-        status: 'error',
-        message: 'Missing refreshToken',
-      });
+      return res.json({ status: 'error', message: 'Missing token' });
     }
 
-    // decode & encode ulang (no modification)
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
     const token = Buffer.from(decoded).toString('base64');
 
-sendResponse(req, res, {
-  status: 'success',
-  message: 'Account Validated.',
-  token,
-  url: '',
-  accountType: 'growtopia',
-  accountAge: 2,
-});
-  } catch (error) {
-    console.log(`[ERROR]: ${error}`);
-    res.json({
-      status: 'error',
-      message: 'Internal Server Error',
+    sendResponse(req, res, {
+      status: 'success',
+      message: 'Account Validated.',
+      token,
+      url: '',
+      accountType: 'growtopia',
+      accountAge: 2,
     });
+  } catch (error) {
+    res.json({ status: 'error', message: 'Validation failed' });
   }
 });
 
 // ================= START =================
 app.listen(PORT, () => {
-  console.log(`[SERVER] Running on http://localhost:${PORT}`);
+  console.log(`[SERVER] vhost/RGT Optimized running on port ${PORT}`);
 });
 
 export default app;
