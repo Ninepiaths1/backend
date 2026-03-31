@@ -12,61 +12,54 @@
     <style>
         :root {
             --gold: #f0c040;
-            --gold-dark: #c89520;
-            --bg-card: #120c1f; /* Warna gelap solid */
-            --bg-input: #0a0614;
-            --border: rgba(240, 192, 64, 0.3);
-            --text-light: #f0e8d8;
+            --text: #f0e8d8;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            -webkit-tap-highlight-color: transparent;
+            outline: none;
         }
 
         body {
             height: 100vh;
-            background-color: #000000; /* Hitam Polos */
+            background: transparent; /* Menghapus background hitam */
             display: flex;
             justify-content: center;
             align-items: center;
             font-family: 'Quicksand', sans-serif;
-            color: var(--text-light);
             overflow: hidden;
         }
 
         .login-container {
             width: 90%;
-            max-width: 360px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 15px;
-            padding: 35px 25px;
+            max-width: 340px;
+            background: rgba(18, 12, 31, 0.9); /* Transparansi sedikit agar teks tetap terbaca */
+            border: 1px solid rgba(240, 192, 64, 0.3);
+            border-radius: 12px;
+            padding: 30px 20px;
             text-align: center;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         }
 
         h2 {
             font-family: 'Cinzel', serif;
-            font-size: 24px;
-            margin-bottom: 25px;
-            color: #ffffff;
+            font-size: 22px;
+            margin-bottom: 20px;
+            color: #fff;
             letter-spacing: 2px;
         }
 
         .form-control {
             width: 100%;
-            padding: 14px;
-            margin-bottom: 12px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: var(--bg-input);
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(240, 192, 64, 0.2);
+            background: rgba(0, 0, 0, 0.4); /* Input transparan gelap */
             color: #fff;
-            font-size: 15px;
-            font-family: inherit;
-            outline: none;
+            font-size: 14px;
         }
 
         .form-control:focus {
@@ -75,41 +68,30 @@
 
         .btn-login {
             width: 100%;
-            padding: 14px;
+            padding: 12px;
             background: var(--gold);
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             font-family: 'Cinzel', serif;
             font-weight: 700;
-            font-size: 16px;
-            color: #000;
             cursor: pointer;
-            margin-top: 10px;
-            transition: opacity 0.2s;
+            transition: 0.2s;
         }
 
         .btn-login:active {
-            opacity: 0.8;
+            transform: scale(0.98);
+            opacity: 0.9;
         }
 
         .btn-register {
-            width: 100%;
-            background: transparent;
+            background: none;
             border: none;
             color: var(--gold);
-            font-family: 'Quicksand', sans-serif;
             font-weight: 700;
-            font-size: 13px;
-            margin-top: 20px;
+            font-size: 12px;
+            margin-top: 15px;
             cursor: pointer;
             text-decoration: underline;
-        }
-
-        /* Hilangkan panah di input number jika ada */
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
         }
     </style>
 </head>
