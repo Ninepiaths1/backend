@@ -5,41 +5,42 @@ import path from 'path';
 import fs from 'fs';
 
 const app = express();
-const PORT = 3000;
-// sendResponse
+const PORT = process.env.PORT || 3000;
+
+// ================= HELPER: SEND RESPONSE =================
+// Menangani perbedaan format respons antara iOS dan Android/Windows
 function sendResponse(req: Request, res: Response, data: any) {
   const userAgent = req.headers['user-agent'] || '';
-
   const isIOS = /iphone|ipad|ios/i.test(userAgent);
 
   if (isIOS) {
-    // iOS butuh JSON proper
+    // iOS membutuhkan JSON proper
     res.setHeader('Content-Type', 'application/json');
     return res.json(data);
   } else {
-    // Windows / Android pakai raw string
+    // Android/Windows (Growtopia SDK) lebih stabil dengan raw string JSON
+    res.setHeader('Content-Type', 'application/json');
     return res.send(JSON.stringify(data));
   }
 }
 
+// ================= SETTINGS & MIDDLEWARE =================
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
-// ================= MIDDLEWARE =================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
+// FIXED: Rate Limit ditingkatkan ke 1000 agar tidak menyebabkan Error 403 saat traffic ramai
 const limiter = rateLimit({
-  windowMs: 60_000,
-  max: 50,
+  windowMs: 1 * 60 * 1000, // 1 Menit
+  max: 1000, 
   standardHeaders: true,
   legacyHeaders: false,
+  message: { status: 'error', message: 'Too many requests, please slow down.' }
 });
 app.use(limiter);
-
-// ================= STATIC =================
-app.use(express.static(path.join(process.cwd(), 'public')));
 
 // ================= LOGGER =================
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -48,113 +49,124 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     req.socket.remoteAddress ||
     'unknown';
 
-  console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
+  res.on('finish', () => {
+    console.log(`[${res.statusCode}] ${req.method} ${req.path} ← ${clientIp}`);
+  });
   next();
 });
 
-// ================= ROOT =================
+// ================= STATIC ASSETS =================
+app.use(express.static(path.join(process.cwd(), 'public')));
+
+// ================= ROUTES =================
+
 app.get('/', (_req: Request, res: Response) => {
-  res.send('Login Server Running');
+  res.send('Login Server for NovaGT is Running');
 });
 
-// ================= DASHBOARD =================
+// DASHBOARD (FIXED: Added Try-Catch & File Check)
 app.all('/player/login/dashboard', async (req: Request, res: Response) => {
-  const body = req.body;
-  let clientData = '';
+  try {
+    const body = req.body;
+    let clientData = '';
 
-  if (body && typeof body === 'object' && Object.keys(body).length > 0) {
-    clientData = Object.keys(body)[0];
+    if (body && typeof body === 'object' && Object.keys(body).length > 0) {
+      clientData = Object.keys(body)[0];
+    }
+
+    const encodedClientData = Buffer.from(clientData).toString('base64');
+    const templatePath = path.join(process.cwd(), 'template', 'dashboard.html');
+
+    if (!fs.existsSync(templatePath)) {
+      return res.status(404).send("Dashboard template not found in server.");
+    }
+
+    const templateContent = fs.readFileSync(templatePath, 'utf-8');
+    const htmlContent = templateContent.replace('{{ data }}', encodedClientData);
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(htmlContent);
+  } catch (error) {
+    console.error(`[DASHBOARD ERROR]: ${error}`);
+    res.status(500).send("Internal Server Error");
   }
-
-  const encodedClientData = Buffer.from(clientData).toString('base64');
-
-  const templatePath = path.join(process.cwd(), 'template', 'dashboard.html');
-  const templateContent = fs.readFileSync(templatePath, 'utf-8');
-
-  const htmlContent = templateContent.replace('{{ data }}', encodedClientData);
-
-  res.setHeader('Content-Type', 'text/html');
-  res.send(htmlContent);
 });
 
-// ================= LOGIN VALIDATE =================
+// LOGIN VALIDATE (FIXED: Improved Payload Parsing)
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
     let _token, growId, password, email;
 
-if (typeof req.body === 'object' && Object.keys(req.body).length === 1) {
-  const raw = Object.keys(req.body)[0];
-  const params = new URLSearchParams(raw);
-
-  _token = params.get('_token');
-  growId = params.get('growId');
-  password = params.get('password');
-  email = params.get('email');
-} else {
-  _token = req.body._token;
-  growId = req.body.growId;
-  password = req.body.password;
-  email = req.body.email;
-}
-
-    // ================= REGISTER BUTTON (EMPTY) =================
-    // kalau kosong → tetap kirim token kosong biar C++ handle register
-    if (!growId && !password) {
-      const raw = `_token=${_token || ''}&growId=&password=`;
-      const token = Buffer.from(raw).toString('base64');
-
-      return sendResponse(req, res, {
-  status: 'success',
-  message: 'Account Validated.',
-  token,
-  url: '',
-  accountType: 'growtopia',
-});
+    // Parsing data dari Android (x-www-form-urlencoded raw)
+    if (req.body && typeof req.body === 'object' && Object.keys(req.body).length === 1) {
+      const raw = Object.keys(req.body)[0];
+      if (raw.includes('=')) {
+        const params = new URLSearchParams(raw);
+        _token = params.get('_token');
+        growId = params.get('growId');
+        password = params.get('password');
+        email = params.get('email');
+      }
+    } else {
+      _token = req.body?._token;
+      growId = req.body?.growId;
+      password = req.body?.password;
+      email = req.body?.email;
     }
 
-    // ================= VALIDASI LOGIN =================
-    if (!growId || !password) {
-      return res.json({
-        status: 'error',
-        message: 'growId and password required',
+    // Handle Register Button (Jika data kosong)
+    if (!growId && !password) {
+      const rawPayload = `_token=${_token || ''}&growId=&password=`;
+      const token = Buffer.from(rawPayload).toString('base64');
+
+      return sendResponse(req, res, {
+        status: 'success',
+        message: 'Account Validated.',
+        token,
+        url: '',
+        accountType: 'growtopia',
       });
     }
 
-    // ================= NORMAL LOGIN =================
-    let raw = `_token=${_token}&growId=${growId}&password=${password}`;
-    if (email) raw += `&email=${email}`;
+    // Validasi input
+    if (!growId || !password) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'GrowID and password are required',
+      });
+    }
 
-    const token = Buffer.from(raw).toString('base64');
+    // Normal Login Token Generation
+    let rawStr = `_token=${_token}&growId=${growId}&password=${password}`;
+    if (email) rawStr += `&email=${email}`;
 
-sendResponse(req, res, {
-  status: 'success',
-  message: 'Account Validated.',
-  token,
-  url: '',
-  accountType: 'growtopia',
-});
-  } catch (error) {
-    console.log(`[ERROR]: ${error}`);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal Server Error',
+    const token = Buffer.from(rawStr).toString('base64');
+
+    sendResponse(req, res, {
+      status: 'success',
+      message: 'Account Validated.',
+      token,
+      url: '',
+      accountType: 'growtopia',
     });
+  } catch (error) {
+    console.error(`[VALIDATE ERROR]: ${error}`);
+    res.status(500).json({ status: 'error', message: 'Internal Server Error' });
   }
 });
 
-// ================= CHECKTOKEN REDIRECT =================
+// CHECKTOKEN REDIRECT
 app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
   return res.redirect(307, '/player/growid/validate/checktoken');
 });
 
-// ================= CHECKTOKEN VALIDATE =================
+// CHECKTOKEN VALIDATE (FIXED: Improved Base64 Handling)
 app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
   try {
     let refreshToken: string | undefined;
 
-    if (typeof req.body === 'object' && req.body !== null) {
+    if (req.body && typeof req.body === 'object') {
       const formData = req.body as Record<string, string>;
-
       if ('refreshToken' in formData) {
         refreshToken = formData.refreshToken;
       } else if (Object.keys(formData).length === 1) {
@@ -165,36 +177,30 @@ app.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     }
 
     if (!refreshToken) {
-      return res.json({
-        status: 'error',
-        message: 'Missing refreshToken',
-      });
+      return res.status(400).json({ status: 'error', message: 'Missing refreshToken' });
     }
 
-    // decode & encode ulang (no modification)
+    // Decode & Re-encode untuk memastikan token valid
     const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
     const token = Buffer.from(decoded).toString('base64');
 
-sendResponse(req, res, {
-  status: 'success',
-  message: 'Account Validated.',
-  token,
-  url: '',
-  accountType: 'growtopia',
-  accountAge: 2,
-});
-  } catch (error) {
-    console.log(`[ERROR]: ${error}`);
-    res.json({
-      status: 'error',
-      message: 'Internal Server Error',
+    sendResponse(req, res, {
+      status: 'success',
+      message: 'Account Validated.',
+      token,
+      url: '',
+      accountType: 'growtopia',
+      accountAge: 2,
     });
+  } catch (error) {
+    console.error(`[CHECKTOKEN ERROR]: ${error}`);
+    res.status(500).json({ status: 'error', message: 'Internal Server Error' });
   }
 });
 
-// ================= START =================
+// ================= SERVER START =================
 app.listen(PORT, () => {
-  console.log(`[SERVER] Running on http://localhost:${PORT}`);
+  console.log(`[SERVER] NovaGT Login System running on port ${PORT}`);
 });
 
 export default app;
