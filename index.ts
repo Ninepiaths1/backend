@@ -109,30 +109,39 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
   try {
-    let _token, growId, password;
+    let _token = '', growId = '', password = '';
 
-    // Parsing Body untuk RGT/Vhost yang sering kirim data mentah
-    const bodyData = typeof req.body === 'string' ? req.body : '';
-    const params = new URLSearchParams(bodyData || Object.keys(req.body)[0]);
-
-    _token = params.get('_token') || req.body._token;
-    growId = params.get('growId') || req.body.growId;
-    password = params.get('password') || req.body.password;
-
-    // Register Click (Kosong)
-    if (!growId && !password) {
-      const token = Buffer.from(`_token=${_token || ''}&growId=&password=`).toString('base64');
-      return sendResponse(req, res, {
-        status: 'success',
-        message: 'Account Validated.',
-        token,
-        url: '',
-        accountType: 'growtopia',
-      });
+    // Deteksi body dari berbagai tipe input (RGT sering kirim raw string)
+    const body = req.body;
+    if (typeof body === 'object' && Object.keys(body).length > 0) {
+      // Jika body berupa objek JSON atau URL Encoded standar
+      const firstKey = Object.keys(body)[0];
+      if (firstKey.includes('growId=')) {
+        const params = new URLSearchParams(firstKey);
+        _token = params.get('_token') || '';
+        growId = params.get('growId') || '';
+        password = params.get('password') || '';
+      } else {
+        _token = body._token || '';
+        growId = body.growId || '';
+        password = body.password || '';
+      }
     }
 
-    // Normal Login
-    const raw = `_token=${_token || ''}&growId=${growId}&password=${password}`;
+    // Jika benar-benar kosong (biasanya klik Create Account tanpa isi apapun)
+    if (!growId || growId.trim() === "") {
+       const token = Buffer.from(`_token=${_token}&growId=&password=`).toString('base64');
+       return sendResponse(req, res, {
+         status: "success",
+         message: "Account Validated.",
+         token,
+         url: "",
+         accountType: "growtopia"
+       });
+    }
+
+    // Login Normal
+    const raw = `_token=${_token}&growId=${growId}&password=${password}`;
     const token = Buffer.from(raw).toString('base64');
 
     sendResponse(req, res, {
@@ -143,8 +152,7 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
       accountType: 'growtopia',
     });
   } catch (error) {
-    console.error(`[LOGIN ERROR]:`, error);
-    res.status(200).json({ status: 'error', message: 'System error' });
+    res.status(200).json({ status: 'error', message: 'Login failed' });
   }
 });
 
