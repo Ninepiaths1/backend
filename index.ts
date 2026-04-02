@@ -14,13 +14,12 @@ function sendResponse(req: Request, res: Response, data: any) {
   if (isIOS) {
     res.setHeader('Content-Type', 'text/plain');
 
-    // convert JSON → key=value format
-    let responseText = '';
+    const params = new URLSearchParams();
     for (const key in data) {
-      responseText += `${key}=${data[key] ?? ''}\n`;
+      params.append(key, data[key] ?? '');
     }
 
-    return res.send(responseText);
+    return res.send(params.toString());
   } else {
     return res.send(JSON.stringify(data));
   }
@@ -83,6 +82,7 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
+  console.log('[DEBUG TOKEN]', _token);
   try {
     let _token, growId, password, email;
 
@@ -158,11 +158,13 @@ sendResponse(req, res, {
 
 // ================= CHECKTOKEN REDIRECT =================
 app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
+  console.log('[DEBUG TOKEN]', _token);
   return res.redirect(307, '/player/growid/validate/checktoken');
 });
 
 // ================= CHECKTOKEN VALIDATE =================
 app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
+  console.log('[DEBUG TOKEN]', _token);
   try {
     let refreshToken: string | undefined;
 
