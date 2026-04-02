@@ -9,15 +9,19 @@ const PORT = 3000;
 // sendResponse
 function sendResponse(req: Request, res: Response, data: any) {
   const userAgent = req.headers['user-agent'] || '';
-
   const isIOS = /iphone|ipad|ios/i.test(userAgent);
 
   if (isIOS) {
-    // iOS butuh JSON proper
-    res.setHeader('Content-Type', 'application/json');
-    return res.json(data);
+    res.setHeader('Content-Type', 'text/plain');
+
+    // convert JSON → key=value format
+    let responseText = '';
+    for (const key in data) {
+      responseText += `${key}=${data[key] ?? ''}\n`;
+    }
+
+    return res.send(responseText);
   } else {
-    // Windows / Android pakai raw string
     return res.send(JSON.stringify(data));
   }
 }
