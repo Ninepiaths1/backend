@@ -12,10 +12,9 @@ function sendResponse(req: Request, res: Response, data: any) {
 
   const isIOS = /iphone|ipad|ios/i.test(userAgent);
 
-  if (isIOS) {
-    // iOS butuh JSON proper
-    res.setHeader('Content-Type', 'application/json');
-    return res.json(data);
+if (isIOS) {   // iOS butuh JSON proper
+  res.setHeader('Content-Type', 'text/plain');
+  return res.send(JSON.stringify(data));
   } else {
     // Windows / Android pakai raw string
     return res.send(JSON.stringify(data));
