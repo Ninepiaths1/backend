@@ -120,7 +120,7 @@ if (typeof req.body === 'object' && Object.keys(req.body).length === 1) {
     }
 
     // ================= NORMAL LOGIN =================
-    let raw = `_token=${_token}&growId=${growId}&password=${password}`;
+let raw = `_token=${_token || ''}&growId=${growId}&password=${password}`;
     if (email) raw += `&email=${email}`;
 
     const token = Buffer.from(raw).toString('base64');
