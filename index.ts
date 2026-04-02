@@ -104,7 +104,12 @@ if (typeof req.body === 'object' && Object.keys(req.body).length === 1) {
     // ================= REGISTER BUTTON (EMPTY) =================
     // kalau kosong → tetap kirim token kosong biar C++ handle register
     if (!growId && !password) {
-const raw = `_token=${_token || 'dummytoken'}&growId=&password=`;
+const safeToken =
+  !_token || _token === 'undefined' || _token === 'null'
+    ? 'dummytoken'
+    : _token;
+
+const raw = `_token=${safeToken}&growId=&password=`;
       const token = Buffer.from(raw).toString('base64');
 
       return sendResponse(req, res, {
@@ -125,7 +130,12 @@ const raw = `_token=${_token || 'dummytoken'}&growId=&password=`;
     }
 
     // ================= NORMAL LOGIN =================
-let raw = `_token=${_token || 'dummytoken'}&growId=${growId}&password=${password}`;
+const safeToken =
+  !_token || _token === 'undefined' || _token === 'null'
+    ? 'dummytoken'
+    : _token;
+
+let raw = `_token=${safeToken}&growId=${growId}&password=${password}`;
     if (email) raw += `&email=${email}`;
 
     const token = Buffer.from(raw).toString('base64');
