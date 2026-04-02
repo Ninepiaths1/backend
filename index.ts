@@ -82,7 +82,6 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 
 // ================= LOGIN VALIDATE =================
 app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
-  console.log('[DEBUG TOKEN]', _token);
   try {
     let _token, growId, password, email;
 
@@ -158,13 +157,11 @@ sendResponse(req, res, {
 
 // ================= CHECKTOKEN REDIRECT =================
 app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
-  console.log('[DEBUG TOKEN]', _token);
   return res.redirect(307, '/player/growid/validate/checktoken');
 });
 
 // ================= CHECKTOKEN VALIDATE =================
 app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
-  console.log('[DEBUG TOKEN]', _token);
   try {
     let refreshToken: string | undefined;
 
