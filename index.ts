@@ -7,7 +7,7 @@ import fs from 'fs';
 const app = express();
 const PORT = 3000;
 // sendResponse
-function sendResponse(req: Request, res: Response, data: any) {
+function return sendResponse(req: Request, res: Response, data: any) {
   const userAgent = req.headers['user-agent'] || '';
 
   const isIOS = /iphone|ipad|ios/i.test(userAgent);
