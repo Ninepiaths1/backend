@@ -98,7 +98,6 @@ if (typeof req.body === 'object' && Object.keys(req.body).length === 1) {
 }
 
     // ================= REGISTER BUTTON (EMPTY) =================
-    // kalau kosong → tetap kirim token kosong biar C++ handle register
     if (!growId && !password) {
       const raw = `_token=${_token || ''}&growId=&password=`;
       const token = Buffer.from(raw).toString('base64');
