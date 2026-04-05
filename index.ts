@@ -6,192 +6,242 @@ import fs from 'fs';
 
 const app = express();
 const PORT = 3000;
-// sendResponse
-function sendResponse(req: Request, res: Response, data: any) {
-  const userAgent = req.headers['user-agent'] || '';
 
-  const isIOS = /iphone|ipad|ios/i.test(userAgent);
-
-  if (isIOS) {
-    // iOS butuh JSON proper
-    res.setHeader('Content-Type', 'application/json');
-    return res.json(data);
-  } else {
-    // Windows / Android pakai raw string
-    return res.send(JSON.stringify(data));
-  }
-}
-
+// @note trust proxy - set to number of proxies in front of app
 app.set('trust proxy', 1);
-app.disable('x-powered-by');
 
-// ================= MIDDLEWARE =================
+// @note middleware setup
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
+// @note rate limiter - 50 requests per minute
 const limiter = rateLimit({
   windowMs: 60_000,
-  max: 500,
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false, xForwardedForHeader: false },
 });
 app.use(limiter);
 
-// ================= STATIC =================
+// @note static files from public folder
 app.use(express.static(path.join(process.cwd(), 'public')));
 
-// ================= LOGGER =================
-app.use((req: Request, res: Response, next: NextFunction) => {
+// @note request logging middleware
+app.use((req: Request, _res: Response, next: NextFunction) => {
   const clientIp =
     (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+    req.headers['x-real-ip'] ||
     req.socket.remoteAddress ||
     'unknown';
 
-  console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
+  console.log(
+    `[REQ] ${req.method} ${req.path} → ${clientIp} | ${_res.statusCode}`,
+  );
   next();
 });
 
-// ================= ROOT =================
+// @note root endpoint
 app.get('/', (_req: Request, res: Response) => {
-  res.send('Login Server Running');
+  res.send('Hello, world!');
 });
 
-// ================= DASHBOARD =================
+/**
+ * @note dashboard endpoint - serves login HTML page with client data
+ * @param req - express request with optional body data
+ * @param res - express response
+ */
 app.all('/player/login/dashboard', async (req: Request, res: Response) => {
   const body = req.body;
   let clientData = '';
 
+  // @note body comes as { "key1|val1\nkey2|val2\n...": "" }
+  // @note the actual data is in the first key, pipe-delimited with \n separators
   if (body && typeof body === 'object' && Object.keys(body).length > 0) {
     clientData = Object.keys(body)[0];
   }
 
+  // @note convert clientData to base64 string without JSON quotes
   const encodedClientData = Buffer.from(clientData).toString('base64');
 
+  // @note read dashboard template and replace placeholder
   const templatePath = path.join(process.cwd(), 'template', 'dashboard.html');
-  const templateContent = fs.readFileSync(templatePath, 'utf-8');
 
+  const templateContent = fs.readFileSync(templatePath, 'utf-8');
   const htmlContent = templateContent.replace('{{ data }}', encodedClientData);
 
   res.setHeader('Content-Type', 'text/html');
   res.send(htmlContent);
 });
 
-// ================= LOGIN VALIDATE =================
-app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
-  try {
-    let _token, growId, password, email;
+/**
+ * @note validate login endpoint - validates GrowID credentials
+ * @param req - express request with growId, password, _token
+ * @param res - express response with token
+ */
+app.all(
+  '/player/growid/login/validate',
+  async (req: Request, res: Response) => {
+    try {
+      const formData = req.body as Record<string, string>;
+      const _token = formData._token;
+      const growId = formData.growId;
+      const password = formData.password;
+      const email = formData.email;
 
-if (typeof req.body === 'object' && Object.keys(req.body).length === 1) {
-  const raw = Object.keys(req.body)[0];
-  const params = new URLSearchParams(raw);
+      let token = '';
+      if (email) {
+        token = Buffer.from(
+          `_token=${_token}&growId=${growId}&password=${password}&email=${email}&reg=1`,
+        ).toString('base64');
+      } else {
+        token = Buffer.from(
+          `_token=${_token}&growId=${growId}&password=${password}&reg=0`,
+        ).toString('base64');
+      }
 
-  _token = params.get('_token');
-  growId = params.get('growId');
-  password = params.get('password');
-  email = params.get('email');
-} else {
-  _token = req.body._token;
-  growId = req.body.growId;
-  password = req.body.password;
-  email = req.body.email;
-}
-
-    // ================= REGISTER BUTTON (EMPTY) =================
-    if (!growId && !password) {
-      const raw = `_token=${_token || ''}&growId=&password=`;
-      const token = Buffer.from(raw).toString('base64');
-
-      return sendResponse(req, res, {
-  status: 'success',
-  message: 'Account Validated.',
-  token,
-  url: '',
-  accountType: 'growtopia',
-});
-    }
-
-    // ================= VALIDASI LOGIN =================
-    if (!growId || !password) {
-      return res.json({
+      res.send(
+        JSON.stringify({
+          status: 'success',
+          message: 'Account Validated.',
+          token,
+          url: '',
+          accountType: 'growtopia',
+        }),
+      );
+    } catch (error) {
+      console.log(`[ERROR]: ${error}`);
+      res.status(500).json({
         status: 'error',
-        message: 'growId and password required',
+        message: 'Internal Server Error',
       });
     }
+  },
+);
 
-    // ================= NORMAL LOGIN =================
-    let raw = `_token=${_token}&growId=${growId}&password=${password}`;
-    if (email) raw += `&email=${email}`;
-
-    const token = Buffer.from(raw).toString('base64');
-
-sendResponse(req, res, {
-  status: 'success',
-  message: 'Account Validated.',
-  token,
-  url: '',
-  accountType: 'growtopia',
-});
-  } catch (error) {
-    console.log(`[ERROR]: ${error}`);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal Server Error',
-    });
-  }
-});
-
-// ================= CHECKTOKEN REDIRECT =================
+/**
+ * @note first checktoken endpoint - redirects to validate endpoint
+ * @param req - express request with refreshToken and clientData
+ * @param res - express response with updated token
+ */
 app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
   return res.redirect(307, '/player/growid/validate/checktoken');
 });
 
-// ================= CHECKTOKEN VALIDATE =================
-app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
-  try {
-    let refreshToken: string | undefined;
+/**
+ * @note second checktoken endpoint - validates token and returns updated token
+ * @param req - express request with refreshToken and clientData
+ * @param res - express response with updated token
+ */
+app.all(
+  '/player/growid/validate/checktoken',
+  async (req: Request, res: Response) => {
+    try {
+      let refreshToken: string | undefined;
+      let clientData: string | undefined;
+      let source = 'empty';
+      const contentType = req.headers['content-type'] || '';
 
-    if (typeof req.body === 'object' && req.body !== null) {
-      const formData = req.body as Record<string, string>;
+      if (typeof req.body === 'object' && req.body !== null) {
+        const formData = req.body as Record<string, string>;
 
-      if ('refreshToken' in formData) {
-        refreshToken = formData.refreshToken;
-      } else if (Object.keys(formData).length === 1) {
-        const rawPayload = Object.keys(formData)[0];
-        const params = new URLSearchParams(rawPayload);
+        if ('refreshToken' in formData || 'clientData' in formData) {
+          refreshToken = formData.refreshToken;
+          clientData = formData.clientData;
+          source = contentType.includes('application/json')
+            ? 'json/object'
+            : 'form-urlencoded';
+        } else if (Object.keys(formData).length === 1) {
+          const rawPayload = Object.keys(formData)[0];
+          const params = new URLSearchParams(rawPayload);
+          refreshToken = params.get('refreshToken') || undefined;
+          clientData = params.get('clientData') || undefined;
+          if (refreshToken || clientData) {
+            source = 'single-key-form-payload';
+          }
+        }
+      } else if (typeof req.body === 'string' && req.body.length > 0) {
+        const params = new URLSearchParams(req.body);
         refreshToken = params.get('refreshToken') || undefined;
+        clientData = params.get('clientData') || undefined;
+        source = 'string/body-parser';
       }
-    }
 
-    if (!refreshToken) {
-      return res.json({
+      if (
+        (!refreshToken || !clientData) &&
+        req.readable &&
+        !req.readableEnded
+      ) {
+        const rawBody = await new Promise<string>((resolve, reject) => {
+          let rawPayload = '';
+
+          req.on('data', (chunk: Buffer | string) => {
+            rawPayload += chunk.toString();
+          });
+          req.on('end', () => resolve(rawPayload));
+          req.on('error', reject);
+        });
+
+        if (rawBody) {
+          const params = new URLSearchParams(rawBody);
+          refreshToken = params.get('refreshToken') || refreshToken;
+          clientData = params.get('clientData') || clientData;
+          if (refreshToken || clientData) {
+            source = 'raw-stream';
+          }
+        }
+      }
+
+      console.log(`[CHECKTOKEN] Parsed as ${source}`);
+
+      if (!refreshToken || !clientData) {
+        console.log(`[ERROR]: Missing refreshToken or clientData`);
+        res.status(200).json({
+          status: 'error',
+          message: 'Missing refreshToken or clientData',
+        });
+        return;
+      }
+
+      let decodedRefreshToken = Buffer.from(refreshToken, 'base64').toString(
+        'utf-8',
+      );
+
+      // @note remove &reg=0/1 from decodedRefreshToken if available
+      if (decodedRefreshToken.includes('&reg=0')) {
+        decodedRefreshToken = decodedRefreshToken.replace('&reg=0', '');
+      } else if (decodedRefreshToken.includes('&reg=1')) {
+        decodedRefreshToken = decodedRefreshToken.replace('&reg=1', '');
+      }
+
+      const token = Buffer.from(
+        decodedRefreshToken.replace(
+          /(_token=)[^&]*/,
+          `$1${Buffer.from(clientData).toString('base64')}`,
+        ),
+      ).toString('base64');
+
+      res.send(
+        JSON.stringify({
+          status: 'success',
+          message: 'Account Validated.',
+          token,
+          url: '',
+          accountType: 'growtopia',
+          accountAge: 2,
+        }),
+      );
+    } catch (error) {
+      console.log(`[ERROR]: ${error}`);
+      res.status(200).json({
         status: 'error',
-        message: 'Missing refreshToken',
+        message: 'Internal Server Error',
       });
     }
+  },
+);
 
-    // decode & encode ulang (no modification)
-    const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
-    const token = Buffer.from(decoded).toString('base64');
-
-sendResponse(req, res, {
-  status: 'success',
-  message: 'Account Validated.',
-  token,
-  url: '',
-  accountType: 'growtopia',
-  accountAge: 2,
-});
-  } catch (error) {
-    console.log(`[ERROR]: ${error}`);
-    res.json({
-      status: 'error',
-      message: 'Internal Server Error',
-    });
-  }
-});
-
-// ================= START =================
 app.listen(PORT, () => {
   console.log(`[SERVER] Running on http://localhost:${PORT}`);
 });
